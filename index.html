@@ -170,6 +170,7 @@
         </div>
     </div>
 
+    <script src="logger.js"></script>
     <script>
         const authForm = document.getElementById('auth-form');
         const formTitle = document.getElementById('form-title');
@@ -213,18 +214,21 @@
             if (!isLogin) {
                 const userRegex = /^[a-zA-Z0-9._]{3,}$/;
                 if (!userRegex.test(user)) {
+                    if (window.logEvent) logEvent('validation_failed', { field: 'username', reason: 'invalid_format' });
                     errorMessage.innerText = "Username must be at least 3 characters and contain only letters, numbers, \".\" or \"_\"";
                     errorMessage.style.display = 'block';
                     return;
                 }
 
                 if (users.find(u => u.user.toLowerCase() === user.toLowerCase())) {
+                    if (window.logEvent) logEvent('validation_failed', { field: 'username', reason: 'already_taken' });
                     errorMessage.innerText = "Username already taken";
                     errorMessage.style.display = 'block';
                     return;
                 }
 
                 if (users.find(u => u.email === email)) {
+                    if (window.logEvent) logEvent('validation_failed', { field: 'email', reason: 'already_registered' });
                     errorMessage.innerText = "There is already an account associated with this email address";
                     errorMessage.style.display = 'block';
                     return;
@@ -232,14 +236,17 @@
 
                 users.push({email, pass, user});
                 localStorage.setItem('usersList', JSON.stringify(users));
+                if (window.logEvent) logEvent('account_created', { user, email });
                 successModal.style.display = 'flex';
 
             } else {
                 const found = users.find(u => u.email === email && u.pass === pass);
                 if (found) {
                     localStorage.setItem('activeUser', found.user);
+                    if (window.logEvent) logEvent('login', { user: found.user });
                     window.location.href = "home.html";
                 } else {
+                    if (window.logEvent) logEvent('login_failed', { email });
                     errorMessage.innerText = "Incorrect credentials";
                     errorMessage.style.display = 'block';
                 }

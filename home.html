@@ -50,7 +50,6 @@
 
         .nav-item:hover, .nav-item.active { color: #fff; }
 
-        /* BLOC DROITE REGROUPÉ */
         .nav-right {
             display: flex;
             align-items: center;
@@ -77,10 +76,9 @@
             background: #222; border-radius: 6px;
             overflow: hidden; display: flex; align-items: center; justify-content: center;
         }
-
         .avatar-box img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* TCHAT LATÉRAL - DROITE */
+        /* TCHAT LATÉRAL */
         .chat-panel {
             position: fixed;
             top: 0;
@@ -95,7 +93,6 @@
             flex-direction: column;
             box-shadow: -10px 0 30px rgba(0,0,0,0.5);
         }
-
         .chat-panel.active { right: 0; }
 
         .chat-header {
@@ -115,7 +112,6 @@
             gap: 15px;
         }
 
-        /* MESSAGES */
         .msg-item { display: flex; gap: 10px; align-items: flex-start; }
         .msg-avatar { width: 32px; height: 32px; border-radius: 6px; overflow: hidden; flex-shrink: 0; background: #222; }
         .msg-avatar img { width: 100%; height: 100%; object-fit: cover; }
@@ -129,7 +125,6 @@
             display: flex;
             gap: 10px;
         }
-
         .chat-input {
             flex: 1;
             background: #111;
@@ -140,7 +135,6 @@
             outline: none;
             font-size: 13px;
         }
-
         .send-btn {
             background: #fff;
             color: #000;
@@ -183,8 +177,8 @@
     <header>
         <div class="nav-center-box">
             <a href="home.html" class="nav-item active">Home</a>
-            <a href="#" class="nav-item">Shop</a>
-            <a href="#" class="nav-item">Lookup</a>
+            <a href="shop.html" class="nav-item">Shop</a>
+            <a href="lookup.html" class="nav-item">Lookup</a>
         </div>
 
         <div class="nav-right">
@@ -210,12 +204,11 @@
         <h2>Content is coming soon...</h2>
     </div>
 
+    <script src="logger.js"></script>
     <script type="module">
-        // Importation des fonctions nécessaires
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, push, onChildAdded, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        // Ta configuration Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyDfpmjienRGdJ_xw4bYYThLGpJ32UG9GdA",
             authDomain: "uhqtchat.firebaseapp.com",
@@ -226,24 +219,23 @@
             appId: "1:1079258617539:web:25fbf5d140a11923e17476"
         };
 
-        // Initialisation
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         const messagesRef = ref(db, 'messages');
 
-        // Gestion de l'utilisateur local
         const activeUser = localStorage.getItem('activeUser');
         const users = JSON.parse(localStorage.getItem('usersList')) || [];
         const currentUser = users.find(u => u.user === activeUser);
 
         if (!activeUser || !currentUser) window.location.href = "index.html";
 
+        if (window.logEvent) logEvent('page_view', { page: 'home', user: currentUser.user });
+
         document.getElementById('display-username').innerText = currentUser.user;
         if (currentUser.profilePic) {
             document.getElementById('avatar-display').innerHTML = `<img src="${currentUser.profilePic}">`;
         }
 
-        // Éléments du DOM
         const chatPanel = document.getElementById('chat-panel');
         const openChatBtn = document.getElementById('open-chat');
         const closeChatBtn = document.getElementById('close-chat');
@@ -251,14 +243,15 @@
         const sendBtn = document.getElementById('send-msg');
         const chatMessages = document.getElementById('chat-messages');
 
-        // Ouverture / Fermeture
-        openChatBtn.onclick = () => chatPanel.classList.add('active');
+        openChatBtn.onclick = () => { chatPanel.classList.add('active'); if (window.logEvent) logEvent('open_chat', { user: currentUser.user }); };
         closeChatBtn.onclick = () => chatPanel.classList.remove('active');
 
-        // FONCTION : Envoyer un message vers Firebase (Public)
         function sendMessage() {
             const text = chatInput.value.trim();
-            if (text === "") return;
+            if (text === "") {
+                if (window.logEvent) logEvent('message_send_failed', { user: currentUser.user, reason: 'empty_message' });
+                return;
+            }
 
             push(messagesRef, {
                 username: currentUser.user,
@@ -267,13 +260,14 @@
                 timestamp: serverTimestamp()
             });
 
+            if (window.logEvent) logEvent('message_sent', { user: currentUser.user, text });
+
             chatInput.value = "";
         }
 
         sendBtn.onclick = sendMessage;
         chatInput.onkeypress = (e) => { if (e.key === "Enter") sendMessage(); };
 
-        // FONCTION : Écouter les messages entrants (Temps réel)
         onChildAdded(messagesRef, (data) => {
             const msg = data.val();
             const msgHtml = `
@@ -291,13 +285,13 @@
             chatMessages.scrollTop = chatMessages.scrollHeight;
         });
 
-        // Menu Profil & Logout
         document.getElementById('profile-trigger').onclick = (e) => {
             e.stopPropagation();
             document.getElementById('dropdown-menu').classList.toggle('active');
         };
         window.onclick = () => document.getElementById('dropdown-menu').classList.remove('active');
         document.getElementById('btn-logout').onclick = () => {
+            if (window.logEvent) logEvent('logout', { user: currentUser.user });
             localStorage.removeItem('activeUser');
             window.location.href = "index.html";
         };

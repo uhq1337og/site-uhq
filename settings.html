@@ -13,9 +13,39 @@
             color: white;
             height: 100vh;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
+            justify-content: center;
         }
+
+        header {
+            width: 100%;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: fixed;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-center-box {
+            display: flex;
+            gap: 10px;
+            background: #0a0a0a;
+            padding: 8px 15px;
+            border-radius: 12px;
+            border: 1px solid #1a1a1a;
+        }
+
+        .nav-item {
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+            padding: 6px 12px;
+            transition: 0.3s;
+        }
+        .nav-item:hover { color: #fff; }
 
         .settings-box {
             background: #0a0a0a;
@@ -26,11 +56,11 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             box-shadow: 0 0 40px rgba(255, 255, 255, 0.05);
             text-align: center;
+            margin-top: 50px;
         }
 
         h1 { font-size: 24px; margin-bottom: 30px; font-weight: 700; }
 
-        /* ERROR MESSAGE ROUGE */
         .error-text { 
             color: #ff4d4d; 
             font-size: 13px; 
@@ -51,8 +81,7 @@
         }
 
         .preview-circle {
-            width: 100%;
-            height: 100%;
+            width: 100%; height: 100%;
             background: #111;
             border: 2px dashed #333;
             border-radius: 50%;
@@ -62,22 +91,15 @@
             overflow: hidden;
             transition: 0.3s;
         }
-
         .preview-circle img { width: 100%; height: 100%; object-fit: cover; }
         .preview-circle:hover { border-color: #fff; }
 
         .upload-icon {
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            background: #fff;
-            color: #000;
-            width: 30px;
-            height: 30px;
+            position: absolute; bottom: 0; right: 0;
+            background: #fff; color: #000;
+            width: 30px; height: 30px;
             border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex; align-items: center; justify-content: center;
             font-size: 14px;
         }
 
@@ -85,30 +107,19 @@
         .form-group label { display: block; font-size: 13px; color: #888; margin-bottom: 8px; }
 
         .input-wrapper {
-            background: #111;
-            border: 1px solid #222;
-            border-radius: 12px;
-            padding: 12px 15px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
+            background: #111; border: 1px solid #222;
+            border-radius: 12px; padding: 12px 15px;
+            display: flex; align-items: center; gap: 12px;
         }
-
         .input-field { background: transparent; border: none; color: #fff; outline: none; width: 100%; font-size: 14px; }
 
         .save-btn {
-            width: 100%;
-            padding: 15px;
-            background: #fff;
-            color: #000;
-            border: none;
-            border-radius: 12px;
-            font-weight: 700;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: 0.3s;
+            width: 100%; padding: 15px;
+            background: #fff; color: #000;
+            border: none; border-radius: 12px;
+            font-weight: 700; cursor: pointer;
+            margin-top: 10px; transition: 0.3s;
         }
-
         .save-btn:hover { transform: scale(1.02); box-shadow: 0 0 20px rgba(255, 255, 255, 0.2); }
         
         .back-link { display: block; margin-top: 20px; color: #666; text-decoration: none; font-size: 14px; }
@@ -117,9 +128,16 @@
 </head>
 <body>
 
+    <header>
+        <div class="nav-center-box">
+            <a href="home.html" class="nav-item">Home</a>
+            <a href="shop.html" class="nav-item">Shop</a>
+            <a href="lookup.html" class="nav-item">Lookup</a>
+        </div>
+    </header>
+
     <div class="settings-box">
         <h1>Account Settings</h1>
-        
         <p id="error-message" class="error-text"></p>
 
         <div class="profile-upload" onclick="document.getElementById('file-input').click()">
@@ -142,6 +160,7 @@
         <a href="home.html" class="back-link">Cancel and go back</a>
     </div>
 
+    <script src="logger.js"></script>
     <script>
         const activeUser = localStorage.getItem('activeUser');
         let users = JSON.parse(localStorage.getItem('usersList')) || [];
@@ -175,30 +194,29 @@
             const newName = usernameInput.value.trim();
             errorMessage.style.display = 'none';
 
-            // 1. Validation format
             const userRegex = /^[a-zA-Z0-9._]{3,}$/;
             if (!userRegex.test(newName)) {
-                errorMessage.innerText = "Username must be at least 3 characters and contain only letters, numbers, \".\" or \"_\"";
+                if (window.logEvent) logEvent('validation_failed', { field: 'username_update', reason: 'invalid_format' });
+                errorMessage.innerText = "Username must be at least 3 characters";
                 errorMessage.style.display = 'block';
                 return;
             }
 
-            // 2. Vérification si le pseudo est déjà pris par QUELQU'UN D'AUTRE
             const exists = users.find(u => u.user.toLowerCase() === newName.toLowerCase() && u.user !== activeUser);
             if (exists) {
+                if (window.logEvent) logEvent('validation_failed', { field: 'username_update', reason: 'already_taken' });
                 errorMessage.innerText = "Username already taken";
                 errorMessage.style.display = 'block';
                 return;
             }
 
-            // 3. Mise à jour des données
             users[userIndex].user = newName;
             users[userIndex].profilePic = base64Image;
             
             localStorage.setItem('usersList', JSON.stringify(users));
             localStorage.setItem('activeUser', newName); 
             
-            // Redirection immédiate sans message d'alerte
+            if (window.logEvent) logEvent('account_updated', { oldUser: activeUser, newUser: newName, hasProfilePic: base64Image.length > 0 });
             window.location.href = "home.html";
         };
     </script>

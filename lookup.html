@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lookup - NETALY</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000;
+            color: white;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        header {
+            width: 100%;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: fixed;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-center-box {
+            display: flex;
+            gap: 10px;
+            background: #0a0a0a;
+            padding: 8px 15px;
+            border-radius: 12px;
+            border: 1px solid #1a1a1a;
+        }
+
+        .nav-item {
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+            padding: 6px 12px;
+            transition: 0.3s;
+        }
+        .nav-item:hover, .nav-item.active { color: #fff; }
+
+        .brand-title {
+            font-size: 90px;
+            font-weight: 900;
+            letter-spacing: -2px;
+            margin-bottom: 15px;
+            background: linear-gradient(to bottom, #fff 40%, #444 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 15px rgba(255,255,255,0.1));
+        }
+
+        .description {
+            color: #888;
+            font-size: 18px;
+            margin-bottom: 45px;
+            max-width: 500px;
+            line-height: 1.6;
+        }
+
+        .discord-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background: #5865F2; 
+            color: white;
+            text-decoration: none;
+            padding: 18px 40px;
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 18px;
+            transition: 0.3s;
+            box-shadow: 0 10px 25px rgba(88, 101, 242, 0.4);
+        }
+
+        .discord-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 35px rgba(88, 101, 242, 0.6);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="nav-center-box">
+            <a href="home.html" class="nav-item">Home</a>
+            <a href="shop.html" class="nav-item">Shop</a>
+            <a href="lookup.html" class="nav-item active">Lookup</a>
+        </div>
+    </header>
+
+    <div class="lookup-container">
+        <h1 class="brand-title">NETALY</h1>
+        <p class="description">Best discord lookup of Europe with 50+ To of database</p>
+        <a href="https://discord.gg/netaly" target="_blank" class="discord-btn">
+            <i class="fab fa-discord"></i> join discord
+        </a>
+    </div>
+
+    <script src="logger.js"></script>
+</body>
+</html>
