@@ -303,8 +303,10 @@
         
         if (logoutBtnHome) {
             logoutBtnHome.onclick = () => {
-                if (window.logEvent) logEvent('logout', { user: currentUser.user });
+                const activeUser = localStorage.getItem('activeUser');
+                if (window.logEvent) logEvent('logout', { user: activeUser });
                 localStorage.removeItem('activeUser');
+                localStorage.removeItem('activeUserId');
                 window.location.href = "index.html";
             };
         }

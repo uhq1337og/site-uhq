@@ -14,7 +14,29 @@
             color: white;
             min-height: 100vh;
             padding: 20px;
+            padding-top: 100px;
         }
+
+        /* CHAT PANEL */
+        .chat-panel{position:fixed;top:0;right:-350px;width:350px;height:100%;background:#0a0a0a;border-left:1px solid #1a1a1a;z-index:2000;transition:0.4s cubic-bezier(0.4, 0, 0.2, 1);display:flex;flex-direction:column;box-shadow:-10px 0 30px rgba(0,0,0,0.5)}
+        .chat-panel.active{right:0}
+        .chat-header{padding:20px;border-bottom:1px solid #1a1a1a;display:flex;justify-content:space-between;align-items:center}
+        .chat-messages{flex:1;padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:15px}
+        .msg-item{display:flex;gap:10px;align-items:flex-start}
+        .msg-avatar{width:32px;height:32px;border-radius:6px;overflow:hidden;flex-shrink:0;background:rgba(34,34,34,0.45)}
+        .msg-avatar img{width:100%;height:100%;object-fit:cover}
+        .msg-content{background:rgba(17,17,17,0.6);padding:10px;border-radius:10px;border:1px solid rgba(26,26,26,0.6);max-width:80%}
+        .msg-user{font-size:11px;font-weight:700;color:#666;margin-bottom:4px;display:block}
+        .msg-text{font-size:13px;line-height:1.4;color:#ddd;word-break:break-word}
+        .chat-input-area{padding:20px;border-top:1px solid #1a1a1a;display:flex;gap:10px}
+        .chat-input{flex:1;background:#111;border:1px solid #222;border-radius:8px;padding:10px;color:white;outline:none;font-size:13px}
+        .send-btn{background:#fff;color:#000;border:none;padding:0 15px;border-radius:8px;cursor:pointer;font-weight:700}
+
+        /* PROFILE MENU */
+        .profile-menu{position:absolute;top:55px;right:0;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:10px;width:180px;display:none;flex-direction:column;padding:5px;z-index:1001}
+        .profile-menu.active{display:flex}
+        .menu-btn{color:white;padding:10px;text-decoration:none;font-size:13px;display:flex;align-items:center;gap:10px;border-radius:6px;border:none;background:none;text-align:left;cursor:pointer;width:100%}
+        .menu-btn:hover{background:#1a1a1a}
 
         header {
             width: 100%;
@@ -52,6 +74,12 @@
         }
 
         .nav-item:hover, .nav-item.active { color: #fff; }
+
+        .nav-right{display:flex;align-items:center;gap:15px;margin-left:auto;position:relative}
+        .user-profile{display:flex;align-items:center;gap:10px;background:rgba(10,10,10,0.65);padding:6px 12px;border-radius:10px;border:1px solid rgba(26,26,26,0.7);cursor:pointer;transition:0.2s}
+        .user-profile:hover{border-color:rgba(51,51,51,0.7)}
+        .avatar-box{width:26px;height:26px;background:rgba(34,34,34,0.45);border-radius:6px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+        .avatar-box img{width:100%;height:100%;object-fit:cover}
 
         .main {
             max-width: 1200px;
