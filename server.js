@@ -2,7 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
-const { pool } = require('./db');
+const redis = require('./redis-client');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -154,26 +154,47 @@ app.post('/api/register', async (req, res) => {
   const { email, pass, user } = req.body;
   if (!email || !pass || !user) return res.status(400).json({ ok: false, error: 'Missing fields' });
 
-  // If DB pool available, persist in MySQL
-  if (pool) {
-    const conn = await pool.getConnection();
+  const redisClient = redis.client();
+  const isRedisConnected = redis.isConnected();
+
+  // If Redis available, persist in Redis
+  if (isRedisConnected && redisClient) {
     try {
-      const [exists] = await conn.query('SELECT user_id FROM users WHERE username = ? OR email = ? LIMIT 1', [user, email]);
-      if (exists.length) return res.status(400).json({ ok: false, error: 'Username or email taken' });
+      // Check if username or email already exists
+      const existingUserId = await redisClient.get(`username:${user.toLowerCase()}`);
+      const existingEmailId = await redisClient.get(`email:${email}`);
+      
+      if (existingUserId) return res.status(400).json({ ok: false, error: 'Username already taken' });
+      if (existingEmailId) return res.status(400).json({ ok: false, error: 'Email already registered' });
 
       const userId = 'USER_' + Math.random().toString(36).substr(2, 9).toUpperCase();
-      await conn.query('INSERT INTO users (user_id, username, email, password, created_at) VALUES (?, ?, ?, ?, ?)', [userId, user, email, pass, new Date()]);
+      
+      // Store user data
+      await redisClient.hSet(`user:${userId}`, {
+        user_id: userId,
+        username: user,
+        email: email,
+        password: pass,
+        created_at: new Date().toISOString()
+      });
 
-      const [countRows] = await conn.query('SELECT COUNT(*) as c FROM users');
-      if (countRows[0].c === 1) {
-        await conn.query('INSERT INTO roles (user_id, role) VALUES (?, ?) ON DUPLICATE KEY UPDATE role = VALUES(role)', [userId, 'admin']);
+      // Store mappings for lookups
+      await redisClient.set(`username:${user.toLowerCase()}`, userId);
+      await redisClient.set(`email:${email}`, userId);
+
+      // Check if this is the first user (should be admin)
+      const allUsers = await redisClient.keys('user:USER_*');
+      if (allUsers.length === 1) {
+        await redisClient.set(`user:${userId}:role`, 'admin');
+      } else {
+        await redisClient.set(`user:${userId}:role`, 'user');
       }
 
       return res.json({ ok: true, userId, user });
     } catch (e) {
-      console.error('DB register error', e);
+      console.error('Redis register error', e);
       return res.status(500).json({ ok: false, error: e.message });
-    } finally { conn.release(); }
+    }
   }
 
   // Fallback: file storage
@@ -194,16 +215,24 @@ app.post('/api/login', async (req, res) => {
   const { email, pass } = req.body;
   if (!email || !pass) return res.status(400).json({ ok: false, error: 'Missing fields' });
 
-  if (pool) {
-    const conn = await pool.getConnection();
+  const redisClient = redis.client();
+  const isRedisConnected = redis.isConnected();
+
+  if (isRedisConnected && redisClient) {
     try {
-      const [rows] = await conn.query('SELECT user_id, username FROM users WHERE email = ? AND password = ? LIMIT 1', [email, pass]);
-      if (rows.length) return res.json({ ok: true, user: rows[0].username, userId: rows[0].user_id });
-      return res.status(401).json({ ok: false, error: 'Invalid credentials' });
+      // Find user by email
+      const userId = await redisClient.get(`email:${email}`);
+      if (!userId) return res.status(401).json({ ok: false, error: 'Invalid credentials' });
+
+      // Get user data
+      const userData = await redisClient.hGetAll(`user:${userId}`);
+      if (userData.password !== pass) return res.status(401).json({ ok: false, error: 'Invalid credentials' });
+
+      return res.json({ ok: true, user: userData.username, userId });
     } catch (e) {
-      console.error('DB login error', e);
+      console.error('Redis login error', e);
       return res.status(500).json({ ok: false, error: e.message });
-    } finally { conn.release(); }
+    }
   }
 
   const users = loadUsers();
@@ -214,16 +243,35 @@ app.post('/api/login', async (req, res) => {
 
 // GET /api/users - Get all users with roles
 app.get('/api/users', async (req, res) => {
-  if (pool) {
-    const conn = await pool.getConnection();
+  const redisClient = redis.client();
+  const isRedisConnected = redis.isConnected();
+
+  if (isRedisConnected && redisClient) {
     try {
-      const [rows] = await conn.query(`SELECT u.user_id as userId, u.username as user, COALESCE(r.role,'user') as role, u.created_at as createdAt
-        FROM users u LEFT JOIN roles r ON u.user_id = r.user_id ORDER BY u.created_at DESC`);
-      return res.json(rows);
+      // Get all user keys
+      const userKeys = await redisClient.keys('user:USER_*');
+      const users = [];
+
+      for (const key of userKeys) {
+        const userId = key.replace('user:', '');
+        const userData = await redisClient.hGetAll(key);
+        const role = await redisClient.get(`user:${userId}:role`) || 'user';
+        
+        users.push({
+          userId,
+          user: userData.username,
+          role,
+          createdAt: userData.created_at
+        });
+      }
+
+      // Sort by created_at descending
+      users.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      return res.json(users);
     } catch (e) {
-      console.error('DB users error', e);
+      console.error('Redis users error', e);
       return res.status(500).json([]);
-    } finally { conn.release(); }
+    }
   }
 
   const users = loadUsers();
@@ -235,16 +283,20 @@ app.get('/api/users', async (req, res) => {
 // GET /api/user/:userId/role - Get user's role
 app.get('/api/user/:userId/role', async (req, res) => {
   const { userId } = req.params;
-  if (pool) {
-    const conn = await pool.getConnection();
+  
+  const redisClient = redis.client();
+  const isRedisConnected = redis.isConnected();
+
+  if (isRedisConnected && redisClient) {
     try {
-      const [rows] = await conn.query('SELECT role FROM roles WHERE user_id = ? LIMIT 1', [userId]);
-      return res.json({ role: rows.length ? rows[0].role : 'user' });
+      const role = await redisClient.get(`user:${userId}:role`) || 'user';
+      return res.json({ role });
     } catch (e) {
-      console.error('DB role fetch error', e);
+      console.error('Redis role fetch error', e);
       return res.json({ role: 'user' });
-    } finally { conn.release(); }
+    }
   }
+
   const roles = loadRoles();
   res.json({ role: roles[userId] || 'user' });
 });
@@ -255,15 +307,17 @@ app.post('/api/user/:userId/role', requireAuth, async (req, res) => {
   const { userId } = req.params;
   if (!['admin', 'moderator', 'user'].includes(role)) return res.status(400).json({ ok: false, error: 'Invalid role' });
 
-  if (pool) {
-    const conn = await pool.getConnection();
+  const redisClient = redis.client();
+  const isRedisConnected = redis.isConnected();
+
+  if (isRedisConnected && redisClient) {
     try {
-      await conn.query('INSERT INTO roles (user_id, role) VALUES (?, ?) ON DUPLICATE KEY UPDATE role = VALUES(role)', [userId, role]);
+      await redisClient.set(`user:${userId}:role`, role);
       return res.json({ ok: true, userId, role });
     } catch (e) {
-      console.error('DB role update error', e);
+      console.error('Redis role update error', e);
       return res.status(500).json({ ok: false, error: e.message });
-    } finally { conn.release(); }
+    }
   }
 
   const rolesObj = loadRoles();

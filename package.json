@@ -4,11 +4,15 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "migrate-db": "node migrate-users-to-mysql.js"
+    "migrate-db": "node migrate-users-to-redis.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.18.2",
-    "mysql2": "^3.16.3"
+    "redis": "^4.6.0",
+    "mongodb": "^7.1.0",
+    "mongoose": "^9.1.6",
+    "mysql2": "^3.16.3",
+    "redis": "^5.10.0"
   }
 }
