@@ -227,7 +227,17 @@
                         body: JSON.stringify({ email, pass, user })
                     });
                     
-                    const data = await response.json();
+                    let data;
+                    try {
+                        data = await response.json();
+                    } catch (jsonError) {
+                        console.error('Invalid JSON response:', jsonError);
+                        const text = await response.text();
+                        console.error('Response text:', text);
+                        errorMessage.innerText = 'Server error: Invalid response format';
+                        errorMessage.style.display = 'block';
+                        return;
+                    }
                     
                     if (!response.ok) {
                         if (window.logEvent) logEvent('validation_failed', { field: 'registration', reason: data.error });
@@ -255,7 +265,17 @@
                         body: JSON.stringify({ email, pass })
                     });
                     
-                    const data = await response.json();
+                    let data;
+                    try {
+                        data = await response.json();
+                    } catch (jsonError) {
+                        console.error('Invalid JSON response:', jsonError);
+                        const text = await response.text();
+                        console.error('Response text:', text);
+                        errorMessage.innerText = 'Server error: Invalid response format';
+                        errorMessage.style.display = 'block';
+                        return;
+                    }
                     
                     if (!response.ok) {
                         if (window.logEvent) logEvent('login_failed', { email });

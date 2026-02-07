@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -177,7 +177,6 @@
     <header>
         <div class="nav-center-box">
             <a href="home.html" class="nav-item active">Home</a>
-            <a href="leaderboard.html" class="nav-item">Leaderboard</a>
             <a href="shop.html" class="nav-item">Shop</a>
             <a href="lookup.html" class="nav-item">Lookup</a>
             <a href="about.html" class="nav-item">About</a>
@@ -286,16 +285,29 @@
             chatMessages.scrollTop = chatMessages.scrollHeight;
         });
 
-        document.getElementById('profile-trigger').onclick = (e) => {
-            e.stopPropagation();
-            document.getElementById('dropdown-menu').classList.toggle('active');
+        const profileTriggerHome = document.getElementById('profile-trigger');
+        const dropdownMenuHome = document.getElementById('dropdown-menu');
+        const logoutBtnHome = document.getElementById('btn-logout');
+        
+        if (profileTriggerHome) {
+            profileTriggerHome.onclick = (e) => {
+                e.stopPropagation();
+                dropdownMenuHome.classList.toggle('active');
+            };
+        }
+        
+        window.onclick = () => {
+            const menu = document.getElementById('dropdown-menu');
+            if (menu) menu.classList.remove('active');
         };
-        window.onclick = () => document.getElementById('dropdown-menu').classList.remove('active');
-        document.getElementById('btn-logout').onclick = () => {
-            if (window.logEvent) logEvent('logout', { user: currentUser.user });
-            localStorage.removeItem('activeUser');
-            window.location.href = "index.html";
-        };
+        
+        if (logoutBtnHome) {
+            logoutBtnHome.onclick = () => {
+                if (window.logEvent) logEvent('logout', { user: currentUser.user });
+                localStorage.removeItem('activeUser');
+                window.location.href = "index.html";
+            };
+        }
     </script>
 </body>
 </html>
