@@ -237,6 +237,10 @@
         if (window.logEvent) logEvent('page_view', { page: 'home', user: currentUser.user, userId: activeUserId });
 
         document.getElementById('display-username').innerText = currentUser.user;
+        if (currentUser.profilePic) {
+            const avatarDisplay = document.getElementById('avatar-display');
+            if (avatarDisplay) avatarDisplay.innerHTML = `<img src="${currentUser.profilePic}">`;
+        }
 
         const chatPanel = document.getElementById('chat-panel');
         const openChatBtn = document.getElementById('open-chat');
