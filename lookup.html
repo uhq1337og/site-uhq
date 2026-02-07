@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lookup - NETALY</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -49,21 +50,27 @@
         .nav-item:hover, .nav-item.active { color: #fff; }
 
         .brand-title {
-            font-size: 90px;
-            font-weight: 900;
-            letter-spacing: -2px;
-            margin-bottom: 15px;
-            background: linear-gradient(to bottom, #fff 40%, #444 100%);
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(80px, 16vw, 240px);
+            font-weight: normal;
+            letter-spacing: -1px;
+            margin-bottom: 22px;
+            background: linear-gradient(180deg, #A6C1FF 0%, #375BFF 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 15px rgba(255,255,255,0.1));
+            text-transform: uppercase;
+            /* white glow on top of the text */
+            text-shadow:
+                0 0 8px rgba(255,255,255,0.95),
+                0 0 28px rgba(255,255,255,0.6),
+                0 12px 40px rgba(0,0,0,0.6);
         }
 
         .description {
-            color: #888;
-            font-size: 18px;
-            margin-bottom: 45px;
-            max-width: 500px;
+            color: #bdbdbd;
+            font-size: 20px;
+            margin-bottom: 56px;
+            max-width: 720px;
             line-height: 1.6;
         }
 
@@ -74,18 +81,81 @@
             background: #5865F2; 
             color: white;
             text-decoration: none;
-            padding: 18px 40px;
-            border-radius: 16px;
-            font-weight: 700;
-            font-size: 18px;
+            padding: 22px 56px;
+            border-radius: 20px;
+            font-weight: 800;
+            font-size: 20px;
             transition: 0.3s;
-            box-shadow: 0 10px 25px rgba(88, 101, 242, 0.4);
+            box-shadow: 0 14px 36px rgba(88, 101, 242, 0.5);
         }
 
         .discord-btn:hover {
             transform: scale(1.05);
             box-shadow: 0 15px 35px rgba(88, 101, 242, 0.6);
         }
+
+        /* Background image behind the NETALY heading */
+        .lookup-container {
+            position: relative;
+            z-index: 1;
+            padding-top: 160px;
+            padding-bottom: 120px;
+        }
+
+        .lookup-container::before {
+            content: "";
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 180%;
+            height: 180%;
+            background-image: url('netaly.png');
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center center;
+            opacity: 0.36;
+            z-index: 1;
+            pointer-events: none;
+            filter: drop-shadow(0 8px 30px rgba(0,0,0,0.6));
+        }
+
+        /* Glow behind the background image */
+        .lookup-container::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 220%;
+            height: 220%;
+            background: radial-gradient(circle at center, rgba(88,101,242,0.45) 0%, rgba(88,101,242,0.25) 18%, rgba(0,0,0,0) 45%),
+                        radial-gradient(circle at center, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 40%);
+            filter: blur(36px);
+            opacity: 0.9;
+            z-index: 0;
+            pointer-events: none;
+            mix-blend-mode: screen;
+        }
+
+        @media (max-width: 600px) {
+            .lookup-container::before {
+                top: 40%;
+                opacity: 0.18;
+                width: 120%;
+                height: 120%;
+            }
+            .lookup-container::after {
+                top: 40%;
+                opacity: 0.6;
+                width: 140%;
+                height: 140%;
+                filter: blur(24px);
+            }
+            .brand-title { font-size: clamp(48px, 14vw, 160px); }
+        }
+
+        .lookup-container > * { position: relative; z-index: 2; }
     </style>
 </head>
 <body>
@@ -95,6 +165,7 @@
             <a href="home.html" class="nav-item">Home</a>
             <a href="shop.html" class="nav-item">Shop</a>
             <a href="lookup.html" class="nav-item active">Lookup</a>
+            <a href="about.html" class="nav-item">About</a>
         </div>
     </header>
 
@@ -102,7 +173,7 @@
         <h1 class="brand-title">NETALY</h1>
         <p class="description">Best discord lookup of Europe with 50+ To of database</p>
         <a href="https://discord.gg/netaly" target="_blank" class="discord-btn">
-            <i class="fab fa-discord"></i> join discord
+            <i class="fab fa-discord"></i> Join discord
         </a>
     </div>
 
