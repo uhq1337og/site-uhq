@@ -247,6 +247,8 @@
                 reader.onload = (event) => {
                     base64Image = event.target.result;
                     preview.innerHTML = `<img src="${base64Image}">`;
+                    const avatarDisplay = document.getElementById('avatar-display');
+                    if (avatarDisplay) avatarDisplay.innerHTML = `<img src="${base64Image}">`;
                 };
                 reader.readAsDataURL(file);
             }
@@ -289,7 +291,28 @@
 
             // Update localStorage
             localStorage.setItem('activeUser', newName);
-            if (window.logEvent) logEvent('account_updated', { oldUser: activeUser, newUser: newName, hasProfilePic: base64Image.length > 0 });
+
+            // Persist/update usersList with new username and profile picture
+            try {
+                const stored = JSON.parse(localStorage.getItem('usersList') || '[]');
+                const idx = stored.findIndex(u => u.user === activeUser);
+                if (idx !== -1) {
+                    stored[idx].user = newName;
+                    if (base64Image) stored[idx].profilePic = base64Image;
+                } else {
+                    stored.push({ user: newName, profilePic: base64Image || '' });
+                }
+                localStorage.setItem('usersList', JSON.stringify(stored));
+            } catch (e) {
+                localStorage.setItem('usersList', JSON.stringify([{ user: newName, profilePic: base64Image || '' }]));
+            }
+
+            if (window.logEvent) logEvent('account_updated', { oldUser: activeUser, newUser: newName, hasProfilePic: (base64Image || '').length > 0 });
+
+            // update header avatar immediately
+            const avatarDisplayNow = document.getElementById('avatar-display');
+            if (avatarDisplayNow && base64Image) avatarDisplayNow.innerHTML = `<img src="${base64Image}">`;
+
             window.location.href = "home.html";
         };
     </script>
