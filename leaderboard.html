@@ -383,10 +383,10 @@
         const messagesRef = ref(db, 'messages');
 
         const activeUser = localStorage.getItem('activeUser');
-        const users = JSON.parse(localStorage.getItem('usersList')) || [];
-        const currentUser = users.find(u => u.user === activeUser);
+        const users = JSON.parse(localStorage.getItem('usersList') || '[]');
+        const currentUser = users.find(u => u.user === activeUser) || { user: activeUser || 'Guest', profilePic: '' };
 
-        if (!activeUser || !currentUser) window.location.href = "index.html";
+        if (!activeUser) window.location.href = "index.html";
 
         if (window.logEvent) logEvent('page_view', { page: 'leaderboard', user: currentUser.user });
 
@@ -424,7 +424,7 @@
         }
 
         sendBtn.onclick = sendMessage;
-        chatInput.onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
+        chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendMessage(); } });
 
         onChildAdded(messagesRef, (snapshot) => {
             const msg = snapshot.val();

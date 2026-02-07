@@ -229,12 +229,14 @@
 
         const activeUser = localStorage.getItem('activeUser');
         const activeUserId = localStorage.getItem('activeUserId');
+        const users = JSON.parse(localStorage.getItem('usersList') || '[]');
+        const currentUser = users.find(u => u.user === activeUser) || { user: activeUser || 'Guest', profilePic: '' };
 
         if (!activeUser || !activeUserId) window.location.href = "index.html";
 
-        if (window.logEvent) logEvent('page_view', { page: 'home', user: activeUser, userId: activeUserId });
+        if (window.logEvent) logEvent('page_view', { page: 'home', user: currentUser.user, userId: activeUserId });
 
-        document.getElementById('display-username').innerText = activeUser;
+        document.getElementById('display-username').innerText = currentUser.user;
 
         const chatPanel = document.getElementById('chat-panel');
         const openChatBtn = document.getElementById('open-chat');
@@ -266,7 +268,7 @@
         }
 
         sendBtn.onclick = sendMessage;
-        chatInput.onkeypress = (e) => { if (e.key === "Enter") sendMessage(); };
+        chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendMessage(); } });
 
         onChildAdded(messagesRef, (data) => {
             const msg = data.val();
