@@ -102,3 +102,12 @@
     letter-spacing: 1px;
     text-transform: capitalize;
 }
+
+/* Welcome text on Home page */
+.welcome-text {
+    color: #fff;
+    font-size: 28px;
+    font-weight: 800;
+    margin-top: 20px;
+    text-align: center;
+}
