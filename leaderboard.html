@@ -199,12 +199,43 @@
     </style>
 </head>
 <body>
+    <div class="chat-panel" id="chat-panel">
+        <div class="chat-header">
+            <span style="font-weight: 800;">Public Chat</span>
+            <i class="fas fa-times" id="close-chat" style="cursor:pointer; color:#555;"></i>
+        </div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input-area">
+            <input type="text" id="chat-input" class="chat-input" placeholder="Write a message...">
+            <button class="send-btn" id="send-msg"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+
     <header>
         <div class="nav-center-box">
             <a href="home.html" class="nav-item">Home</a>
             <a href="shop.html" class="nav-item">Shop</a>
             <a href="lookup.html" class="nav-item">Lookup</a>
-            <a href="about.html" class="nav-item">About</a>
+            <a href="about.html" class="nav-item">About us</a>
+        </div>
+
+        <div class="nav-right">
+            <i class="far fa-comment-dots" id="open-chat" style="color:#666; cursor:pointer; font-size: 20px; padding: 5px;"></i>
+            
+            <div style="position: relative;">
+                <div class="user-profile" id="profile-trigger">
+                    <div class="avatar-box" id="avatar-display"><i class="fas fa-user"></i></div>
+                    <span id="display-username">Guest</span>
+                </div>
+
+                <div class="profile-menu" id="dropdown-menu">
+                    <a href="settings.html" class="menu-btn"><i class="fas fa-user-cog"></i> Account Settings</a>
+                    <a href="logs.html" class="menu-btn"><i class="fas fa-chart-line"></i> Logs Dashboard</a>
+                    <button class="menu-btn" style="color:#ff4d4d;" id="btn-logout">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </div>
+            </div>
         </div>
     </header>
 
@@ -328,6 +359,102 @@
 
         // Load users on page load
         loadUsers();
+    </script>
+
+    <script src="logger.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, push, onChildAdded, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDfpmjienRGdJ_xw4bYYThLGpJ32UG9GdA",
+            authDomain: "uhqtchat.firebaseapp.com",
+            databaseURL: "https://uhqtchat-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "uhqtchat",
+            storageBucket: "uhqtchat.firebasestorage.app",
+            messagingSenderId: "1079258617539",
+            appId: "1:1079258617539:web:25fbf5d140a11923e17476"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const messagesRef = ref(db, 'messages');
+
+        const activeUser = localStorage.getItem('activeUser');
+        const users = JSON.parse(localStorage.getItem('usersList')) || [];
+        const currentUser = users.find(u => u.user === activeUser);
+
+        if (!activeUser || !currentUser) window.location.href = "index.html";
+
+        if (window.logEvent) logEvent('page_view', { page: 'leaderboard', user: currentUser.user });
+
+        document.getElementById('display-username').innerText = currentUser.user;
+        if (currentUser.profilePic) {
+            document.getElementById('avatar-display').innerHTML = `<img src="${currentUser.profilePic}">`;
+        }
+
+        const chatPanel = document.getElementById('chat-panel');
+        const openChatBtn = document.getElementById('open-chat');
+        const closeChatBtn = document.getElementById('close-chat');
+        const chatInput = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('send-msg');
+        const chatMessages = document.getElementById('chat-messages');
+
+        openChatBtn.onclick = () => { chatPanel.classList.add('active'); if (window.logEvent) logEvent('open_chat', { user: currentUser.user }); };
+        closeChatBtn.onclick = () => chatPanel.classList.remove('active');
+
+        function sendMessage() {
+            const text = chatInput.value.trim();
+            if (text === "") {
+                if (window.logEvent) logEvent('message_send_failed', { user: currentUser.user, reason: 'empty_message' });
+                return;
+            }
+
+            push(messagesRef, {
+                username: currentUser.user,
+                text: text,
+                profilePic: currentUser.profilePic || "",
+                timestamp: serverTimestamp()
+            });
+
+            chatInput.value = "";
+            if (window.logEvent) logEvent('message_sent', { user: currentUser.user });
+        }
+
+        sendBtn.onclick = sendMessage;
+        chatInput.onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
+
+        onChildAdded(messagesRef, (snapshot) => {
+            const msg = snapshot.val();
+            if (msg) {
+                const div = document.createElement('div');
+                div.className = 'msg-item';
+                div.innerHTML = `
+                    <div class="msg-avatar">${msg.profilePic ? `<img src="${msg.profilePic}">` : '<i class="fas fa-user"></i>'}</div>
+                    <div class="msg-content">
+                        <span class="msg-user">${msg.username}</span>
+                        <span class="msg-text">${msg.text}</span>
+                    </div>
+                `;
+                chatMessages.appendChild(div);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        });
+
+        const profileTrigger = document.getElementById('profile-trigger');
+        const dropdownMenu = document.getElementById('dropdown-menu');
+        const logoutBtn = document.getElementById('btn-logout');
+
+        if (profileTrigger) {
+            profileTrigger.onclick = () => dropdownMenu.classList.toggle('active');
+        }
+        
+        if (logoutBtn) {
+            logoutBtn.onclick = () => {
+                localStorage.removeItem('activeUser');
+                window.location.href = 'index.html';
+            };
+        }
     </script>
 </body>
 </html>
