@@ -125,3 +125,4 @@
 {"timestamp":"2026-02-07T20:40:23.858Z","body":{"type":"page_view","payload":{"page":"home","user":"jesuisbibilabille"},"ts":"2026-02-07T20:40:22.890Z","url":"/home.html"}}
 {"timestamp":"2026-02-07T20:40:24.932Z","body":{"type":"page_view","payload":{"page":"about","user":"jesuisbibilabille"},"ts":"2026-02-07T20:40:23.963Z","url":"/about.html"}}
 {"timestamp":"2026-02-07T20:41:52.483Z","body":{"type":"page_view","payload":{"page":"home","user":"jesuisbibilabille","userId":null},"ts":"2026-02-07T20:41:51.505Z","url":"/home.html"}}
+{"timestamp":"2026-02-07T21:24:51.242Z","body":{"type":"validation_failed","payload":{"field":"username","reason":"invalid_format"},"ts":"2026-02-07T21:24:50.133Z","url":"/"}}
