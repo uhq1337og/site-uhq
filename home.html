@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000;
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* HEADER */
+        header {
+            width: 100%;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            position: fixed;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-center-box {
+            display: flex;
+            gap: 10px;
+            background: #0a0a0a;
+            padding: 8px 15px;
+            border-radius: 12px;
+            border: 1px solid #1a1a1a;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .nav-item {
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+            padding: 6px 12px;
+            transition: 0.3s;
+        }
+
+        .nav-item:hover, .nav-item.active { color: #fff; }
+
+        /* BLOC DROITE REGROUPÉ */
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-left: auto;
+            position: relative;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #0a0a0a;
+            padding: 6px 12px;
+            border-radius: 10px;
+            border: 1px solid #1a1a1a;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .user-profile:hover { border-color: #333; }
+
+        .avatar-box {
+            width: 26px; height: 26px;
+            background: #222; border-radius: 6px;
+            overflow: hidden; display: flex; align-items: center; justify-content: center;
+        }
+
+        .avatar-box img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* TCHAT LATÉRAL - DROITE */
+        .chat-panel {
+            position: fixed;
+            top: 0;
+            right: -350px;
+            width: 350px;
+            height: 100%;
+            background: #0a0a0a;
+            border-left: 1px solid #1a1a1a;
+            z-index: 2000;
+            transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+        }
+
+        .chat-panel.active { right: 0; }
+
+        .chat-header {
+            padding: 20px;
+            border-bottom: 1px solid #1a1a1a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* MESSAGES */
+        .msg-item { display: flex; gap: 10px; align-items: flex-start; }
+        .msg-avatar { width: 32px; height: 32px; border-radius: 6px; overflow: hidden; flex-shrink: 0; background: #222; }
+        .msg-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .msg-content { background: #111; padding: 10px; border-radius: 10px; border: 1px solid #1a1a1a; max-width: 80%; }
+        .msg-user { font-size: 11px; font-weight: 700; color: #666; margin-bottom: 4px; display: block; }
+        .msg-text { font-size: 13px; line-height: 1.4; color: #ddd; word-break: break-word; }
+
+        .chat-input-area {
+            padding: 20px;
+            border-top: 1px solid #1a1a1a;
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 8px;
+            padding: 10px;
+            color: white;
+            outline: none;
+            font-size: 13px;
+        }
+
+        .send-btn {
+            background: #fff;
+            color: #000;
+            border: none;
+            padding: 0 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        /* MENU PROFIL */
+        .profile-menu {
+            position: absolute; top: 55px; right: 0;
+            background: #0a0a0a; border: 1px solid #1a1a1a;
+            border-radius: 10px; width: 180px; display: none;
+            flex-direction: column; padding: 5px; z-index: 1001;
+        }
+        .profile-menu.active { display: flex; }
+        .menu-btn { color: white; padding: 10px; text-decoration: none; font-size: 13px; display: flex; align-items: center; gap: 10px; border-radius: 6px; border: none; background: none; text-align: left; cursor: pointer; width: 100%; }
+        .menu-btn:hover { background: #1a1a1a; }
+
+        .main-content { padding-top: 150px; text-align: center; }
+        .main-content h2 { color: #222; font-size: 30px; }
+    </style>
+</head>
+<body>
+
+    <div class="chat-panel" id="chat-panel">
+        <div class="chat-header">
+            <span style="font-weight: 800;">Public Chat</span>
+            <i class="fas fa-times" id="close-chat" style="cursor:pointer; color:#555;"></i>
+        </div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input-area">
+            <input type="text" id="chat-input" class="chat-input" placeholder="Write a message...">
+            <button class="send-btn" id="send-msg"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <header>
+        <div class="nav-center-box">
+            <a href="home.html" class="nav-item active">Home</a>
+            <a href="#" class="nav-item">Shop</a>
+            <a href="#" class="nav-item">Lookup</a>
+        </div>
+
+        <div class="nav-right">
+            <i class="far fa-comment-dots" id="open-chat" style="color:#666; cursor:pointer; font-size: 20px; padding: 5px;"></i>
+            
+            <div style="position: relative;">
+                <div class="user-profile" id="profile-trigger">
+                    <div class="avatar-box" id="avatar-display"><i class="fas fa-user"></i></div>
+                    <span id="display-username">Guest</span>
+                </div>
+
+                <div class="profile-menu" id="dropdown-menu">
+                    <a href="settings.html" class="menu-btn"><i class="fas fa-user-cog"></i> Account Settings</a>
+                    <button class="menu-btn" style="color:#ff4d4d;" id="btn-logout">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-content">
+        <h2>Content is coming soon...</h2>
+    </div>
+
+    <script type="module">
+        // Importation des fonctions nécessaires
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, push, onChildAdded, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        // Ta configuration Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyDfpmjienRGdJ_xw4bYYThLGpJ32UG9GdA",
+            authDomain: "uhqtchat.firebaseapp.com",
+            databaseURL: "https://uhqtchat-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "uhqtchat",
+            storageBucket: "uhqtchat.firebasestorage.app",
+            messagingSenderId: "1079258617539",
+            appId: "1:1079258617539:web:25fbf5d140a11923e17476"
+        };
+
+        // Initialisation
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const messagesRef = ref(db, 'messages');
+
+        // Gestion de l'utilisateur local
+        const activeUser = localStorage.getItem('activeUser');
+        const users = JSON.parse(localStorage.getItem('usersList')) || [];
+        const currentUser = users.find(u => u.user === activeUser);
+
+        if (!activeUser || !currentUser) window.location.href = "index.html";
+
+        document.getElementById('display-username').innerText = currentUser.user;
+        if (currentUser.profilePic) {
+            document.getElementById('avatar-display').innerHTML = `<img src="${currentUser.profilePic}">`;
+        }
+
+        // Éléments du DOM
+        const chatPanel = document.getElementById('chat-panel');
+        const openChatBtn = document.getElementById('open-chat');
+        const closeChatBtn = document.getElementById('close-chat');
+        const chatInput = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('send-msg');
+        const chatMessages = document.getElementById('chat-messages');
+
+        // Ouverture / Fermeture
+        openChatBtn.onclick = () => chatPanel.classList.add('active');
+        closeChatBtn.onclick = () => chatPanel.classList.remove('active');
+
+        // FONCTION : Envoyer un message vers Firebase (Public)
+        function sendMessage() {
+            const text = chatInput.value.trim();
+            if (text === "") return;
+
+            push(messagesRef, {
+                username: currentUser.user,
+                text: text,
+                profilePic: currentUser.profilePic || "",
+                timestamp: serverTimestamp()
+            });
+
+            chatInput.value = "";
+        }
+
+        sendBtn.onclick = sendMessage;
+        chatInput.onkeypress = (e) => { if (e.key === "Enter") sendMessage(); };
+
+        // FONCTION : Écouter les messages entrants (Temps réel)
+        onChildAdded(messagesRef, (data) => {
+            const msg = data.val();
+            const msgHtml = `
+                <div class="msg-item">
+                    <div class="msg-avatar">
+                        ${msg.profilePic ? `<img src="${msg.profilePic}">` : `<i class="fas fa-user" style="color:#555; margin: 8px;"></i>`}
+                    </div>
+                    <div class="msg-content">
+                        <span class="msg-user">${msg.username}</span>
+                        <p class="msg-text">${msg.text}</p>
+                    </div>
+                </div>
+            `;
+            chatMessages.insertAdjacentHTML('beforeend', msgHtml);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+
+        // Menu Profil & Logout
+        document.getElementById('profile-trigger').onclick = (e) => {
+            e.stopPropagation();
+            document.getElementById('dropdown-menu').classList.toggle('active');
+        };
+        window.onclick = () => document.getElementById('dropdown-menu').classList.remove('active');
+        document.getElementById('btn-logout').onclick = () => {
+            localStorage.removeItem('activeUser');
+            window.location.href = "index.html";
+        };
+    </script>
+</body>
+</html>

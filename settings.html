@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Settings</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000;
+            color: white;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .settings-box {
+            background: #0a0a0a;
+            border-radius: 24px;
+            padding: 40px;
+            width: 100%;
+            max-width: 450px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 40px rgba(255, 255, 255, 0.05);
+            text-align: center;
+        }
+
+        h1 { font-size: 24px; margin-bottom: 30px; font-weight: 700; }
+
+        /* ERROR MESSAGE ROUGE */
+        .error-text { 
+            color: #ff4d4d; 
+            font-size: 13px; 
+            margin-bottom: 20px; 
+            display: none; 
+            background: rgba(255, 77, 77, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 77, 77, 0.2);
+        }
+
+        .profile-upload {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 30px;
+            cursor: pointer;
+        }
+
+        .preview-circle {
+            width: 100%;
+            height: 100%;
+            background: #111;
+            border: 2px dashed #333;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: 0.3s;
+        }
+
+        .preview-circle img { width: 100%; height: 100%; object-fit: cover; }
+        .preview-circle:hover { border-color: #fff; }
+
+        .upload-icon {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: #fff;
+            color: #000;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .form-group { text-align: left; margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 13px; color: #888; margin-bottom: 8px; }
+
+        .input-wrapper {
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 12px;
+            padding: 12px 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .input-field { background: transparent; border: none; color: #fff; outline: none; width: 100%; font-size: 14px; }
+
+        .save-btn {
+            width: 100%;
+            padding: 15px;
+            background: #fff;
+            color: #000;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: 0.3s;
+        }
+
+        .save-btn:hover { transform: scale(1.02); box-shadow: 0 0 20px rgba(255, 255, 255, 0.2); }
+        
+        .back-link { display: block; margin-top: 20px; color: #666; text-decoration: none; font-size: 14px; }
+        .back-link:hover { color: #fff; }
+    </style>
+</head>
+<body>
+
+    <div class="settings-box">
+        <h1>Account Settings</h1>
+        
+        <p id="error-message" class="error-text"></p>
+
+        <div class="profile-upload" onclick="document.getElementById('file-input').click()">
+            <div class="preview-circle" id="image-preview">
+                <i class="fas fa-camera" style="font-size: 24px; color: #444;"></i>
+            </div>
+            <div class="upload-icon"><i class="fas fa-plus"></i></div>
+            <input type="file" id="file-input" hidden accept="image/*">
+        </div>
+
+        <div class="form-group">
+            <label>Change Username</label>
+            <div class="input-wrapper">
+                <i class="fas fa-user" style="color: #555;"></i>
+                <input type="text" id="new-username" class="input-field" placeholder="New username">
+            </div>
+        </div>
+
+        <button class="save-btn" id="save-settings">Save Changes</button>
+        <a href="home.html" class="back-link">Cancel and go back</a>
+    </div>
+
+    <script>
+        const activeUser = localStorage.getItem('activeUser');
+        let users = JSON.parse(localStorage.getItem('usersList')) || [];
+        let userIndex = users.findIndex(u => u.user === activeUser);
+
+        if (userIndex === -1) window.location.href = "index.html";
+
+        const currentUser = users[userIndex];
+        const usernameInput = document.getElementById('new-username');
+        const preview = document.getElementById('image-preview');
+        const fileInput = document.getElementById('file-input');
+        const errorMessage = document.getElementById('error-message');
+        let base64Image = currentUser.profilePic || "";
+
+        usernameInput.value = currentUser.user;
+        if (base64Image) preview.innerHTML = `<img src="${base64Image}">`;
+
+        fileInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    base64Image = event.target.result;
+                    preview.innerHTML = `<img src="${base64Image}">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
+        document.getElementById('save-settings').onclick = () => {
+            const newName = usernameInput.value.trim();
+            errorMessage.style.display = 'none';
+
+            // 1. Validation format
+            const userRegex = /^[a-zA-Z0-9._]{3,}$/;
+            if (!userRegex.test(newName)) {
+                errorMessage.innerText = "Username must be at least 3 characters and contain only letters, numbers, \".\" or \"_\"";
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            // 2. Vérification si le pseudo est déjà pris par QUELQU'UN D'AUTRE
+            const exists = users.find(u => u.user.toLowerCase() === newName.toLowerCase() && u.user !== activeUser);
+            if (exists) {
+                errorMessage.innerText = "Username already taken";
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            // 3. Mise à jour des données
+            users[userIndex].user = newName;
+            users[userIndex].profilePic = base64Image;
+            
+            localStorage.setItem('usersList', JSON.stringify(users));
+            localStorage.setItem('activeUser', newName); 
+            
+            // Redirection immédiate sans message d'alerte
+            window.location.href = "home.html";
+        };
+    </script>
+</body>
+</html>

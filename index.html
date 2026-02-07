@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login / Sign Up - Premium</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000;
+            color: white;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* CORRECTIF POUR L'AUTOFILL (Le truc blanc de Chrome/Edge) */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px #111 inset !important;
+            -webkit-text-fill-color: white !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+
+        /* CADRE DE LOGIN AVEC GLOW */
+        .login-box {
+            background: #0a0a0a;
+            border-radius: 24px;
+            padding: 45px 40px;
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 40px rgba(255, 255, 255, 0.05);
+            text-align: center;
+            position: relative;
+            z-index: 10;
+        }
+
+        .login-box h1 {
+            font-size: 32px;
+            margin-bottom: 35px;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+
+        /* FORMULAIRE */
+        .form-group { text-align: left; margin-bottom: 22px; }
+        .form-group label { display: block; font-size: 13px; color: #888; margin-bottom: 8px; font-weight: 500; }
+
+        .input-wrapper {
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 14px;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: 0.3s;
+        }
+
+        .input-wrapper:focus-within {
+            border-color: #fff;
+            background: #151515;
+        }
+
+        .input-wrapper i { color: #555; font-size: 14px; }
+        .input-field { background: transparent; border: none; color: #fff; outline: none; width: 100%; font-size: 14px; }
+
+        /* BOUTON BLANC GLOW */
+        .login-button {
+            width: 100%;
+            padding: 16px;
+            background: #fff;
+            color: #000;
+            border: none;
+            border-radius: 14px;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+            box-shadow: 0 10px 20px rgba(255, 255, 255, 0.1);
+            transition: 0.3s;
+        }
+
+        .login-button:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.25); 
+        }
+
+        .signup-link { margin-top: 25px; color: #666; font-size: 14px; }
+        .signup-link a { color: #fff; text-decoration: none; font-weight: 600; cursor: pointer; }
+
+        /* ERROR MESSAGE */
+        .error-text { 
+            color: #ff4d4d; 
+            font-size: 13px; 
+            margin-bottom: 20px; 
+            display: none; 
+            background: rgba(255, 77, 77, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 77, 77, 0.2);
+        }
+
+        /* MODAL SUCCÈS */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center;
+            z-index: 2000;
+        }
+        .modal-content { 
+            background: #0a0a0a; padding: 40px; border-radius: 24px; 
+            border: 1px solid #333; text-align: center; max-width: 320px;
+        }
+        .modal-content i { font-size: 50px; color: #fff; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <div id="success-modal" class="modal-overlay">
+        <div class="modal-content">
+            <i class="fas fa-check-circle"></i>
+            <h2>Compte créé !</h2>
+            <p style="color: #888; margin: 15px 0 25px;">You can now log in with your credentials.</p>
+            <button onclick="closeModal()" class="login-button">Great!</button>
+        </div>
+    </div>
+
+    <div class="login-box">
+        <h1 id="form-title">Login</h1>
+        <p id="error-message" class="error-text"></p>
+
+        <form id="auth-form">
+            <div class="form-group" id="username-group" style="display: none;">
+                <label>Username</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="username" class="input-field" placeholder="Username">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Email Address</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="email" class="input-field" required placeholder="email@example.com">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Password</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="password" class="input-field" required placeholder="••••••••">
+                </div>
+            </div>
+
+            <button type="submit" id="main-btn" class="login-button">Login</button>
+        </form>
+
+        <div class="signup-link">
+            <p id="switch-text">Don't have an account? <a id="toggle-auth">Sign up</a></p>
+        </div>
+    </div>
+
+    <script>
+        const authForm = document.getElementById('auth-form');
+        const formTitle = document.getElementById('form-title');
+        const mainBtn = document.getElementById('main-btn');
+        const toggleAuth = document.getElementById('toggle-auth');
+        const usernameGroup = document.getElementById('username-group');
+        const errorMessage = document.getElementById('error-message');
+        const successModal = document.getElementById('success-modal');
+
+        let isLogin = true;
+
+        toggleAuth.onclick = (e) => {
+            e.preventDefault();
+            isLogin = !isLogin;
+            errorMessage.style.display = 'none';
+            authForm.reset();
+            
+            if (isLogin) {
+                formTitle.innerText = "Login";
+                mainBtn.innerText = "Login";
+                usernameGroup.style.display = "none";
+                document.getElementById('switch-text').innerHTML = 'Don\'t have an account? <a id="toggle-auth">Sign up</a>';
+            } else {
+                formTitle.innerText = "Sign Up";
+                mainBtn.innerText = "Create Account";
+                usernameGroup.style.display = "block";
+                document.getElementById('switch-text').innerHTML = 'Already have an account? <a id="toggle-auth">Login</a>';
+            }
+            document.getElementById('toggle-auth').onclick = toggleAuth.onclick;
+        };
+
+        authForm.onsubmit = (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            const pass = document.getElementById('password').value;
+            const user = document.getElementById('username').value.trim();
+            let users = JSON.parse(localStorage.getItem('usersList')) || [];
+
+            errorMessage.style.display = 'none';
+
+            if (!isLogin) {
+                const userRegex = /^[a-zA-Z0-9._]{3,}$/;
+                if (!userRegex.test(user)) {
+                    errorMessage.innerText = "Username must be at least 3 characters and contain only letters, numbers, \".\" or \"_\"";
+                    errorMessage.style.display = 'block';
+                    return;
+                }
+
+                if (users.find(u => u.user.toLowerCase() === user.toLowerCase())) {
+                    errorMessage.innerText = "Username already taken";
+                    errorMessage.style.display = 'block';
+                    return;
+                }
+
+                if (users.find(u => u.email === email)) {
+                    errorMessage.innerText = "There is already an account associated with this email address";
+                    errorMessage.style.display = 'block';
+                    return;
+                }
+
+                users.push({email, pass, user});
+                localStorage.setItem('usersList', JSON.stringify(users));
+                successModal.style.display = 'flex';
+
+            } else {
+                const found = users.find(u => u.email === email && u.pass === pass);
+                if (found) {
+                    localStorage.setItem('activeUser', found.user);
+                    window.location.href = "home.html";
+                } else {
+                    errorMessage.innerText = "Incorrect credentials";
+                    errorMessage.style.display = 'block';
+                }
+            }
+        };
+
+        function closeModal() {
+            successModal.style.display = 'none';
+            isLogin = false;
+            toggleAuth.click();
+        }
+    </script>
+</body>
+</html>
