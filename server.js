@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
+const { pool } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -149,94 +150,125 @@ function saveUsers(users) {
 }
 
 // POST /api/register - Register new account
-app.post('/api/register', (req, res) => {
+app.post('/api/register', async (req, res) => {
   const { email, pass, user } = req.body;
-  
-  if (!email || !pass || !user) {
-    return res.status(400).json({ ok: false, error: 'Missing fields' });
+  if (!email || !pass || !user) return res.status(400).json({ ok: false, error: 'Missing fields' });
+
+  // If DB pool available, persist in MySQL
+  if (pool) {
+    const conn = await pool.getConnection();
+    try {
+      const [exists] = await conn.query('SELECT user_id FROM users WHERE username = ? OR email = ? LIMIT 1', [user, email]);
+      if (exists.length) return res.status(400).json({ ok: false, error: 'Username or email taken' });
+
+      const userId = 'USER_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+      await conn.query('INSERT INTO users (user_id, username, email, password, created_at) VALUES (?, ?, ?, ?, ?)', [userId, user, email, pass, new Date()]);
+
+      const [countRows] = await conn.query('SELECT COUNT(*) as c FROM users');
+      if (countRows[0].c === 1) {
+        await conn.query('INSERT INTO roles (user_id, role) VALUES (?, ?) ON DUPLICATE KEY UPDATE role = VALUES(role)', [userId, 'admin']);
+      }
+
+      return res.json({ ok: true, userId, user });
+    } catch (e) {
+      console.error('DB register error', e);
+      return res.status(500).json({ ok: false, error: e.message });
+    } finally { conn.release(); }
   }
 
+  // Fallback: file storage
   let users = loadUsers();
-  
-  // Check if user already exists
-  if (users.find(u => u.user.toLowerCase() === user.toLowerCase())) {
-    return res.status(400).json({ ok: false, error: 'Username already taken' });
-  }
-  
-  if (users.find(u => u.email === email)) {
-    return res.status(400).json({ ok: false, error: 'Email already registered' });
-  }
-
-  // Create new user with unique ID
+  if (users.find(u => u.user.toLowerCase() === user.toLowerCase())) return res.status(400).json({ ok: false, error: 'Username already taken' });
+  if (users.find(u => u.email === email)) return res.status(400).json({ ok: false, error: 'Email already registered' });
   const userId = 'USER_' + Math.random().toString(36).substr(2, 9).toUpperCase();
   const newUser = { userId, email, pass, user, createdAt: new Date().toISOString() };
-  
   users.push(newUser);
   saveUsers(users);
-  
-  // Make first user admin
-  if (users.length === 1) {
-    const roles = loadRoles();
-    roles[userId] = 'admin';
-    saveRoles(roles);
-  }
-  
+  const roles = loadRoles();
+  if (users.length === 1) { roles[userId] = 'admin'; saveRoles(roles); }
   res.json({ ok: true, userId, user });
 });
 
 // POST /api/login - Login user
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
   const { email, pass } = req.body;
-  
-  if (!email || !pass) {
-    return res.status(400).json({ ok: false, error: 'Missing fields' });
+  if (!email || !pass) return res.status(400).json({ ok: false, error: 'Missing fields' });
+
+  if (pool) {
+    const conn = await pool.getConnection();
+    try {
+      const [rows] = await conn.query('SELECT user_id, username FROM users WHERE email = ? AND password = ? LIMIT 1', [email, pass]);
+      if (rows.length) return res.json({ ok: true, user: rows[0].username, userId: rows[0].user_id });
+      return res.status(401).json({ ok: false, error: 'Invalid credentials' });
+    } catch (e) {
+      console.error('DB login error', e);
+      return res.status(500).json({ ok: false, error: e.message });
+    } finally { conn.release(); }
   }
 
   const users = loadUsers();
   const found = users.find(u => u.email === email && u.pass === pass);
-  
-  if (found) {
-    return res.json({ ok: true, user: found.user, userId: found.userId });
-  }
-  
+  if (found) return res.json({ ok: true, user: found.user, userId: found.userId });
   res.status(401).json({ ok: false, error: 'Invalid credentials' });
 });
 
 // GET /api/users - Get all users with roles
-app.get('/api/users', (req, res) => {
+app.get('/api/users', async (req, res) => {
+  if (pool) {
+    const conn = await pool.getConnection();
+    try {
+      const [rows] = await conn.query(`SELECT u.user_id as userId, u.username as user, COALESCE(r.role,'user') as role, u.created_at as createdAt
+        FROM users u LEFT JOIN roles r ON u.user_id = r.user_id ORDER BY u.created_at DESC`);
+      return res.json(rows);
+    } catch (e) {
+      console.error('DB users error', e);
+      return res.status(500).json([]);
+    } finally { conn.release(); }
+  }
+
   const users = loadUsers();
   const roles = loadRoles();
-  
-  const usersWithRoles = users.map(u => ({
-    userId: u.userId,
-    user: u.user,
-    role: roles[u.userId] || 'user',
-    createdAt: u.createdAt
-  }));
-  
+  const usersWithRoles = users.map(u => ({ userId: u.userId, user: u.user, role: roles[u.userId] || 'user', createdAt: u.createdAt }));
   res.json(usersWithRoles);
 });
 
 // GET /api/user/:userId/role - Get user's role
-app.get('/api/user/:userId/role', (req, res) => {
+app.get('/api/user/:userId/role', async (req, res) => {
   const { userId } = req.params;
+  if (pool) {
+    const conn = await pool.getConnection();
+    try {
+      const [rows] = await conn.query('SELECT role FROM roles WHERE user_id = ? LIMIT 1', [userId]);
+      return res.json({ role: rows.length ? rows[0].role : 'user' });
+    } catch (e) {
+      console.error('DB role fetch error', e);
+      return res.json({ role: 'user' });
+    } finally { conn.release(); }
+  }
   const roles = loadRoles();
   res.json({ role: roles[userId] || 'user' });
 });
 
 // POST /api/user/:userId/role - Change user's role (admin only)
-app.post('/api/user/:userId/role', requireAuth, (req, res) => {
+app.post('/api/user/:userId/role', requireAuth, async (req, res) => {
   const { role } = req.body;
   const { userId } = req.params;
-  
-  if (!['admin', 'moderator', 'user'].includes(role)) {
-    return res.status(400).json({ ok: false, error: 'Invalid role' });
+  if (!['admin', 'moderator', 'user'].includes(role)) return res.status(400).json({ ok: false, error: 'Invalid role' });
+
+  if (pool) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.query('INSERT INTO roles (user_id, role) VALUES (?, ?) ON DUPLICATE KEY UPDATE role = VALUES(role)', [userId, role]);
+      return res.json({ ok: true, userId, role });
+    } catch (e) {
+      console.error('DB role update error', e);
+      return res.status(500).json({ ok: false, error: e.message });
+    } finally { conn.release(); }
   }
-  
-  const roles = loadRoles();
-  roles[userId] = role;
-  saveRoles(roles);
-  
+
+  const rolesObj = loadRoles();
+  rolesObj[userId] = role;
+  saveRoles(rolesObj);
   res.json({ ok: true, userId, role });
 });
 
