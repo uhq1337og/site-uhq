@@ -7,14 +7,25 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
-        body{background:#000;color:#fff;font-family:Inter, sans-serif;min-height:100vh}
+        body{background:#000;color:#fff;font-family:Inter, sans-serif;min-height:100vh;overflow:hidden}
         header{width:100%;height:80px;display:flex;align-items:center;justify-content:center;position:fixed;top:0;z-index:1000}
         .nav-center-box{display:flex;gap:10px;background:#0a0a0a;padding:8px 15px;border-radius:12px;border:1px solid #1a1a1a}
         .nav-item{color:#666;text-decoration:none;font-size:14px;padding:6px 12px;transition:0.3s}
         .nav-item:hover,.nav-item.active{color:#fff}
-        .main-content{padding-top:180px;display:flex;align-items:center;justify-content:center;height:calc(100vh - 180px);text-align:center}
-        .main-content h1{color:#fff;font-size:64px;font-weight:900;letter-spacing:0.5px}
-        @media (max-width:600px){.main-content h1{font-size:36px;padding:0 20px}}
+        .main-content{padding-top:80px;width:100%;height:100vh;position:relative;display:flex;align-items:center;justify-content:center}
+        
+        .images-container{width:100%;height:100%;position:relative;perspective:1200px}
+        .image-wrapper{position:absolute;top:50%;transform:translateY(-50%);height:90%;object-fit:contain;transition:all 0.3s ease-out}
+        .image-left{left:80px;width:28%;transform:translateY(-50%) rotateY(30deg) scale(1)}
+        .image-left:hover{transform:translateY(-50%) rotateY(30deg) scale(1.1);filter:drop-shadow(0 0 30px rgba(255,255,255,0.6));z-index:100}
+        .image-left img{width:100%;height:100%;object-fit:contain}
+        .image-right{right:80px;width:28%;transform:translateY(-50%) rotateY(-30deg) scale(1)}
+        .image-right:hover{transform:translateY(-50%) rotateY(-30deg) scale(1.1);filter:drop-shadow(0 0 30px rgba(255,255,255,0.6));z-index:100}
+        .image-right img{width:100%;height:100%;object-fit:contain}
+        
+        @media (max-width:768px){
+            .image-left,.image-right{width:70%}
+        }
     </style>
 </head>
 <body>
@@ -28,9 +39,19 @@
     </header>
 
     <div class="main-content">
-        <h1>o</h1>
+        <div class="images-container">
+            <div class="image-wrapper image-left">
+                <img src="x3d%20discord.png" alt="x3d discord">
+            </div>
+            <div class="image-wrapper image-right">
+                <img src="o%20discord.png" alt="o discord">
+            </div>
+        </div>
     </div>
 
     <script src="logger.js"></script>
 </body>
 </html>
+<!-- ...existing code... -->
+    <style>
+       

@@ -13,7 +13,40 @@ if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR);
 
 app.use(cors());
 app.use(express.json());
+
+// --- Basic authentication for admin routes ---
+const ADMIN_USER = process.env.ADMIN_USER || 'admin';
+const ADMIN_PASS = process.env.ADMIN_PASS || 'uhq123';
+
+function requireAuth(req, res, next) {
+  const auth = req.headers.authorization;
+  if (!auth) {
+    res.set('WWW-Authenticate', 'Basic realm="Logs"');
+    return res.status(401).send('Authentication required');
+  }
+  const parts = auth.split(' ');
+  if (parts.length !== 2 || parts[0] !== 'Basic') return res.status(400).send('Bad Authorization header');
+  const creds = Buffer.from(parts[1], 'base64').toString();
+  const idx = creds.indexOf(':');
+  const user = creds.slice(0, idx);
+  const pass = creds.slice(idx + 1);
+  if (user === ADMIN_USER && pass === ADMIN_PASS) return next();
+  res.set('WWW-Authenticate', 'Basic realm="Logs"');
+  return res.status(401).send('Invalid credentials');
+}
+
+// Serve logs dashboard page BEFORE static files (with authentication)
+app.get('/logs.html', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'logs.html'));
+});
+
+// Serve all other static files (without authentication)
 app.use(express.static(__dirname));
+
+// Root route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 // Rotate logs when file exceeds MAX_LOG_SIZE
 function rotateLogIfNeeded() {
@@ -45,7 +78,7 @@ app.post('/log', (req, res) => {
 });
 
 // GET /logs endpoint to fetch logs
-app.get('/logs', (req, res) => {
+app.get('/logs', requireAuth, (req, res) => {
   const type = req.query.type || '';
   const limit = parseInt(req.query.limit) || 100;
   
@@ -71,7 +104,7 @@ app.get('/logs', (req, res) => {
 });
 
 // POST /clear-logs to clear all logs
-app.post('/clear-logs', (req, res) => {
+app.post('/clear-logs', requireAuth, (req, res) => {
   try {
     if (fs.existsSync(LOG_FILE)) {
       fs.unlinkSync(LOG_FILE);

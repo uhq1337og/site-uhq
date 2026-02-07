@@ -35,6 +35,23 @@ Puis ouvrez :
 - **App** : `http://localhost:3000/index.html`
 - **Dashboard** : `http://localhost:3000/logs.html`
 
+### Protection par mot de passe
+
+Le dashboard est protégé par HTTP Basic Auth. Définissez les variables d'environnement `ADMIN_USER` et `ADMIN_PASS` avant de démarrer le serveur.
+
+Localement :
+```powershell
+$env:ADMIN_USER='admin'
+$env:ADMIN_PASS='votre_mot_de_passe'
+npm start
+```
+
+Sur Railway :
+- Ouvrez votre projet → Settings → Variables
+- Ajoutez `ADMIN_USER` et `ADMIN_PASS` et redéployez
+
+Lorsque vous accédez à `/logs.html`, le navigateur vous demandera le nom d'utilisateur et le mot de passe.
+
 ## Fichiers JSON des logs
 
 Consultez `logs/app.log` pour les logs en format JSON, ligne par ligne.
