@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard - Premium</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000;
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        header {
+            width: 100%;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+            background: rgba(0,0,0,0.8);
+            border-bottom: 1px solid #1a1a1a;
+        }
+
+        .nav-center-box {
+            display: flex;
+            gap: 10px;
+            background: #0a0a0a;
+            padding: 8px 15px;
+            border-radius: 12px;
+            border: 1px solid #1a1a1a;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .nav-item {
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+            padding: 6px 12px;
+            transition: 0.3s;
+        }
+
+        .nav-item:hover, .nav-item.active { color: #fff; }
+
+        .main {
+            max-width: 1200px;
+            margin: 100px auto 0;
+            padding: 30px;
+        }
+
+        h1 {
+            font-size: 32px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #0a0a0a;
+            border: 1px solid #1a1a1a;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .leaderboard-table th {
+            background: #111;
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #1a1a1a;
+            font-weight: 600;
+            color: #888;
+        }
+
+        .leaderboard-table td {
+            padding: 15px;
+            border-bottom: 1px solid #1a1a1a;
+        }
+
+        .leaderboard-table tr:hover {
+            background: #111;
+        }
+
+        .rank-badge {
+            background: #222;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-weight: 700;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .rank-1 { background: #FFD700; color: #000; }
+        .rank-2 { background: #C0C0C0; color: #000; }
+        .rank-3 { background: #CD7F32; color: #fff; }
+
+        .role-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .role-admin { background: #ff4d4d; color: white; }
+        .role-moderator { background: #4d94ff; color: white; }
+        .role-user { background: #666; color: white; }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-id {
+            font-size: 12px;
+            color: #888;
+            font-family: monospace;
+        }
+
+        .filter-section {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            background: #111;
+            border: 1px solid #222;
+            color: #888;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .filter-btn.active {
+            background: #fff;
+            color: #000;
+            border-color: #fff;
+        }
+
+        .filter-btn:hover {
+            border-color: #666;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #ff4d4d;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="nav-center-box">
+            <a href="home.html" class="nav-item">Home</a>
+            <a href="shop.html" class="nav-item">Shop</a>
+            <a href="lookup.html" class="nav-item">Lookup</a>
+            <a href="leaderboard.html" class="nav-item active">Leaderboard</a>
+            <a href="about.html" class="nav-item">About</a>
+        </div>
+    </header>
+
+    <div class="main">
+        <h1>🏆 Leaderboard</h1>
+
+        <div class="filter-section">
+            <button class="filter-btn active" data-filter="all">All Users</button>
+            <button class="filter-btn" data-filter="admin">Admins</button>
+            <button class="filter-btn" data-filter="moderator">Moderators</button>
+            <button class="filter-btn" data-filter="user">Users</button>
+        </div>
+
+        <table class="leaderboard-table">
+            <thead>
+                <tr>
+                    <th style="width: 10%;">Rank</th>
+                    <th style="width: 25%;">Username</th>
+                    <th style="width: 20%;">Role</th>
+                    <th style="width: 25%;">User ID</th>
+                    <th style="width: 20%;">Joined</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboard-body">
+                <tr class="loading">
+                    <td colspan="5">Loading users...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script src="logger.js"></script>
+    <script>
+        let allUsers = [];
+        let currentFilter = 'all';
+
+        async function loadUsers() {
+            try {
+                // Load users from localStorage
+                const usersList = JSON.parse(localStorage.getItem('usersList') || '[]');
+                
+                if (usersList.length === 0) {
+                    document.getElementById('leaderboard-body').innerHTML = 
+                        '<tr class="loading"><td colspan="5">No users found</td></tr>';
+                    return;
+                }
+
+                // Get roles for all users from server
+                const rolesPromises = usersList.map(u => 
+                    fetch(`/api/user/${u.userId}/role`).then(r => r.json()).catch(() => ({ role: 'user' }))
+                );
+                const rolesArray = await Promise.all(rolesPromises);
+
+                allUsers = usersList.map((user, idx) => ({
+                    ...user,
+                    role: rolesArray[idx]?.role || 'user'
+                }));
+
+                renderLeaderboard();
+                if (window.logEvent) window.logEvent('page_view', { page: 'leaderboard', users: allUsers.length });
+            } catch (error) {
+                console.error('Failed to load users:', error);
+                document.getElementById('leaderboard-body').innerHTML = 
+                    '<tr class="error"><td colspan="5">Failed to load leaderboard</td></tr>';
+            }
+        }
+
+        function getRoleClass(role) {
+            return `role-${role}`;
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('fr-FR');
+        }
+
+        function renderLeaderboard() {
+            const filtered = currentFilter === 'all' 
+                ? allUsers 
+                : allUsers.filter(u => u.role === currentFilter);
+
+            const sorted = filtered.sort((a, b) => {
+                const roleOrder = { admin: 0, moderator: 1, user: 2 };
+                return roleOrder[a.role] - roleOrder[b.role];
+            });
+
+            const tbody = document.getElementById('leaderboard-body');
+            
+            if (sorted.length === 0) {
+                tbody.innerHTML = '<tr class="loading"><td colspan="5">No users found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = sorted.map((user, idx) => `
+                <tr>
+                    <td>
+                        <span class="rank-badge rank-${idx + 1 <= 3 ? idx + 1 : ''}">#${idx + 1}</span>
+                    </td>
+                    <td>
+                        <div class="user-info">
+                            <i class="fas fa-user"></i>
+                            <strong>${user.user}</strong>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="role-badge ${getRoleClass(user.role)}">
+                            <i class="fas fa-${user.role === 'admin' ? 'crown' : user.role === 'moderator' ? 'shield-alt' : 'user'}"></i>
+                            ${user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="user-id">${user.userId}</span>
+                    </td>
+                    <td>${formatDate(user.createdAt)}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                currentFilter = e.target.dataset.filter;
+                renderLeaderboard();
+                if (window.logEvent) window.logEvent('leaderboard_filter', { filter: currentFilter });
+            });
+        });
+
+        // Load users on page load
+        loadUsers();
+    </script>
+</body>
+</html>

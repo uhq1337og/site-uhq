@@ -13,18 +13,18 @@
         .nav-item{color:#666;text-decoration:none;font-size:14px;padding:6px 12px;transition:0.3s}
         .nav-item:hover,.nav-item.active{color:#fff}
         .nav-right{display:flex;align-items:center;gap:15px;margin-left:auto;position:relative}
-        .user-profile{display:flex;align-items:center;gap:10px;background:#0a0a0a;padding:6px 12px;border-radius:10px;border:1px solid #1a1a1a;cursor:pointer;transition:0.2s}
-        .user-profile:hover{border-color:#333}
-        .avatar-box{width:26px;height:26px;background:#222;border-radius:6px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+    .user-profile{display:flex;align-items:center;gap:10px;background:rgba(10,10,10,0.65);padding:6px 12px;border-radius:10px;border:1px solid rgba(26,26,26,0.7);cursor:pointer;transition:0.2s}
+    .user-profile:hover{border-color:rgba(51,51,51,0.7)}
+    .avatar-box{width:26px;height:26px;background:rgba(34,34,34,0.45);border-radius:6px;overflow:hidden;display:flex;align-items:center;justify-content:center}
         .avatar-box img{width:100%;height:100%;object-fit:cover}
         .chat-panel{position:fixed;top:0;right:-350px;width:350px;height:100%;background:#0a0a0a;border-left:1px solid #1a1a1a;z-index:2000;transition:0.4s cubic-bezier(0.4, 0, 0.2, 1);display:flex;flex-direction:column;box-shadow:-10px 0 30px rgba(0,0,0,0.5)}
         .chat-panel.active{right:0}
         .chat-header{padding:20px;border-bottom:1px solid #1a1a1a;display:flex;justify-content:space-between;align-items:center}
         .chat-messages{flex:1;padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:15px}
         .msg-item{display:flex;gap:10px;align-items:flex-start}
-        .msg-avatar{width:32px;height:32px;border-radius:6px;overflow:hidden;flex-shrink:0;background:#222}
+    .msg-avatar{width:32px;height:32px;border-radius:6px;overflow:hidden;flex-shrink:0;background:rgba(34,34,34,0.45)}
         .msg-avatar img{width:100%;height:100%;object-fit:cover}
-        .msg-content{background:#111;padding:10px;border-radius:10px;border:1px solid #1a1a1a;max-width:80%}
+    .msg-content{background:rgba(17,17,17,0.6);padding:10px;border-radius:10px;border:1px solid rgba(26,26,26,0.6);max-width:80%}
         .msg-user{font-size:11px;font-weight:700;color:#666;margin-bottom:4px;display:block}
         .msg-text{font-size:13px;line-height:1.4;color:#ddd;word-break:break-word}
         .chat-input-area{padding:20px;border-top:1px solid #1a1a1a;display:flex;gap:10px}
@@ -52,28 +52,23 @@
             .image-left,.image-right{width:70%}
         }
         /* Center text block between images */
-        .image-center{left:50%;top:50%;transform:translate(-50%,-50%);width:45%;height:auto;text-align:center;position:absolute;display:flex;align-items:center;justify-content:center;z-index:50}
+        .image-center{left:50%;top:15%;transform:translateX(-50%);width:35%;height:80%;text-align:center;position:absolute;display:flex;align-items:flex-start;justify-content:center;z-index:50;perspective:1200px}
         .image-center .center-box{
             color:#fff;
-            font-size:clamp(16px,2.5vw,20px); /* reduced and responsive */
-            line-height:1.3;
-            padding:16px;
-            background:rgba(0,0,0,0.35);
-            border-radius:10px;
-            display:inline-block; /* allow transform */
-            transition:transform 220ms ease, text-shadow 220ms ease, box-shadow 220ms ease;
-            text-shadow:0 0 10px rgba(255,255,255,0.26); /* slightly stronger base glow */
-            box-shadow:0 8px 40px rgba(255,255,255,0.05);
+            font-size:clamp(24px,4vw,32px);
+            line-height:1.6;
+            padding:0;
+            background:transparent;
+            border-radius:0;
+            display:block;
+            text-shadow:0 0 25px rgba(255,255,255,0.8);
             -webkit-font-smoothing:antialiased;
-        }
-        .image-center .center-box:hover{
-            transform:scale(1.06); /* gentle enlargement */
-            text-shadow:0 0 18px rgba(255,255,255,0.42); /* brighter but still moderate */
-            box-shadow:0 14px 50px rgba(255,255,255,0.09);
+            transform:rotateX(15deg);
+            transform-origin:center center;
         }
         @media (max-width:768px){
             .image-center{width:80%}
-            .image-center .center-box{font-size:clamp(14px,3.5vw,18px);padding:12px}
+            .image-center .center-box{font-size:clamp(18px,4vw,24px);padding:20px}
         }
     </style>
 </head>
@@ -126,25 +121,21 @@
             <!-- Centered text between the two images -->
                 <div class="image-wrapper image-center">
                     <div class="center-box">
-                        Sur Discord, y’a des pseudos qui claquent…
-Et y’a des noms qui marquent.
-x3d, wxcb, hoorkyxx, wisox.
-Quatre mecs, une seule aura : ultra UHQ.
+                        Sur Discord, y’a des pseudos qui claquent… Et y’a des noms qui marquent. x3d, wxcb, hoorkyxx, wisox. Quatre mecs, une seule aura : ultra UHQ.
+x3d, le cerveau froid. Vision claire, stratégie propre, toujours un coup d’avance. Il parle pas pour rien, mais quand il parle, ça fait loi. Le genre de mec qui construit dans l’ombre pendant que les autres font du bruit.
+wxcb, le feu. L’énergie, la vibe, le charisme. Il rentre dans un vocal, tout s’allume. Il motive, il unit, il pousse les gens à se dépasser. Un leader naturel, sans forcer.
+hoorkyxx, le mystère. Discret, lourd, toujours clean. Il est pas là pour briller, il est là pour être efficace. Mental solide, présence silencieuse, respect automatique. Le genre de gars qu’on remarque sans qu’il cherche l’attention.
+wisox, la précision. Calme, réfléchi, focus. Il observe, il analyse, il agit au bon moment. Pas d’erreur inutile, pas de précipitation. Un mec carré, fiable, constant.
 
-x3d, le cerveau froid.
-Vision claire, stratégie propre, toujours un coup d’avance. Il parle pas pour rien, mais quand il parle, ça fait loi. Le genre de mec qui construit dans l’ombre pendant que les autres font du bruit.
+Et puis y’a les autres qui complètent le noyau.
+reda, la base. Stable, lucide, toujours présent quand il faut. Il sécurise, il soutient, il tient la ligne. Sans lui, l’équilibre est bancal.
+qL, l’instinct. Rapide, tranchant, il sent les choses avant qu’elles arrivent. Décisions nettes, timing juste. Il hésite pas, il exécute.
+op, l’impact. Peu de mots, beaucoup d’effet. Quand il agit, ça se voit. Il apporte le poids, la crédibilité, la force tranquille.
+qlvg, la vision long terme. Il pense large, il pense loin. Organisation propre, idées solides, toujours un plan en tête.
+bilal, la discipline. Sérieux, constant, jamais à côté. Il fait le taf, encore et encore, sans chercher la lumière.
+rami, le lien. Il connecte les gens, il fluidifie les échanges. Calme, posé, intelligent. Il évite les frictions, il renforce la structure.
 
-wxcb, le feu.
-L’énergie, la vibe, le charisme. Il rentre dans un vocal, tout s’allume. Il motive, il unit, il pousse les gens à se dépasser. Un leader naturel, sans forcer.
-
-hoorkyxx, le mystère.
-Discret, lourd, toujours clean. Il est pas là pour briller, il est là pour être efficace. Mental solide, présence silencieuse, respect automatique. Le genre de gars qu’on remarque sans qu’il cherche l’attention.
-
-wisox, la précision.
-Calme, réfléchi, focus. Il observe, il analyse, il agit au bon moment. Pas d’erreur inutile, pas de précipitation. Un mec carré, fiable, constant.
-
-Ensemble, c’est pas une team.
-C’est une structure.
+Ensemble, c’est pas une team. C’est une structure.
 Pas de drama, pas de chaos, pas de cinéma.
 Que du sérieux, du niveau, de la vision.
 
@@ -154,10 +145,11 @@ et ceux qu’on respecte.
 
 Eux, on les respecte.
 x3d. wxcb. hoorkyxx. wisox.
+reda. qL. op. qlvg. bilal. rami.
+
 Des pseudos.
-Des bg.
-Des vrais. 💯🔥 
-                
+Des mecs solides.
+Des vrais.                
                     </div>
                 </div>
             <div class="image-wrapper image-right">
@@ -170,6 +162,10 @@ Des vrais. 💯🔥
         <div class="images-container">
             <div class="image-wrapper image-left">
                 <img src="hoorkyxx%20discord.png" alt="hoorkyxx discord">
+            </div>
+            <div class="image-wrapper image-center">
+                <div class="center-box">
+                </div>
             </div>
             <div class="image-wrapper image-right">
                 <img src="wisox%20discord.png" alt="wisox discord">

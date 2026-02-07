@@ -234,9 +234,11 @@
                     return;
                 }
 
-                users.push({email, pass, user});
+                // Generate unique ID for new account
+                const userId = 'USER_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+                users.push({userId, email, pass, user, createdAt: new Date().toISOString()});
                 localStorage.setItem('usersList', JSON.stringify(users));
-                if (window.logEvent) logEvent('account_created', { user, email });
+                if (window.logEvent) logEvent('account_created', { user, email, userId });
                 successModal.style.display = 'flex';
 
             } else {

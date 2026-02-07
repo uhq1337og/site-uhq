@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Roles - Admin Panel</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000;
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        header {
+            width: 100%;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+            background: rgba(0,0,0,0.8);
+            border-bottom: 1px solid #1a1a1a;
+        }
+
+        .nav-center-box {
+            display: flex;
+            gap: 10px;
+            background: #0a0a0a;
+            padding: 8px 15px;
+            border-radius: 12px;
+            border: 1px solid #1a1a1a;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .nav-item {
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+            padding: 6px 12px;
+            transition: 0.3s;
+        }
+
+        .nav-item:hover, .nav-item.active { color: #fff; }
+
+        .main {
+            max-width: 1200px;
+            margin: 100px auto 0;
+            padding: 30px;
+        }
+
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        h1 {
+            font-size: 32px;
+        }
+
+        .access-denied {
+            text-align: center;
+            padding: 60px 20px;
+            background: #111;
+            border-radius: 12px;
+            border: 1px solid #1a1a1a;
+        }
+
+        .access-denied-icon {
+            font-size: 60px;
+            color: #ff4d4d;
+            margin-bottom: 20px;
+        }
+
+        .search-box {
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 8px;
+            padding: 10px 15px;
+            color: white;
+            width: 250px;
+        }
+
+        .users-grid {
+            display: grid;
+            gap: 15px;
+        }
+
+        .user-card {
+            background: #0a0a0a;
+            border: 1px solid #1a1a1a;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: 0.2s;
+        }
+
+        .user-card:hover {
+            border-color: #333;
+            background: #111;
+        }
+
+        .user-info {
+            flex: 1;
+        }
+
+        .user-name {
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .user-id {
+            font-size: 12px;
+            color: #888;
+            font-family: monospace;
+        }
+
+        .user-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .role-select {
+            background: #111;
+            border: 1px solid #222;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .role-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            min-width: 100px;
+            text-align: center;
+        }
+
+        .role-admin { background: #ff4d4d; color: white; }
+        .role-moderator { background: #4d94ff; color: white; }
+        .role-user { background: #666; color: white; }
+
+        .btn {
+            background: white;
+            color: black;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+
+        .btn:hover {
+            background: #ddd;
+        }
+
+        .btn-danger {
+            background: #ff4d4d;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #ff3333;
+        }
+
+        .loading, .error {
+            text-align: center;
+            padding: 40px;
+            font-size: 16px;
+        }
+
+        .error {
+            color: #ff4d4d;
+        }
+
+        .loading {
+            color: #888;
+        }
+
+        .success-msg {
+            background: #0a7a0a;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="nav-center-box">
+            <a href="home.html" class="nav-item">Home</a>
+            <a href="leaderboard.html" class="nav-item">Leaderboard</a>
+        </div>
+    </header>
+
+    <div class="main" id="main-content">
+        <div class="header-section">
+            <h1>🔐 Manage User Roles</h1>
+            <input type="text" id="search-box" class="search-box" placeholder="Search by username or ID...">
+        </div>
+
+        <div id="success-msg" class="success-msg" style="display: none;"></div>
+        <div id="users-list" class="users-grid">
+            <div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading users...</div>
+        </div>
+    </div>
+
+    <script src="logger.js"></script>
+    <script>
+        let allUsers = [];
+        let isAdmin = false;
+
+        // Check if user is admin
+        async function checkAccess() {
+            const username = localStorage.getItem('activeUser');
+            if (!username) {
+                showAccessDenied('You must be logged in');
+                return false;
+            }
+
+            // In a real app, you'd verify admin status via the server
+            // For now, we'll check localStorage users
+            try {
+                const users = JSON.parse(localStorage.getItem('usersList') || '[]');
+                const currentUser = users.find(u => u.user === username);
+                
+                // Hardcode first user as admin for demo
+                if (currentUser && currentUser.user === users[0].user) {
+                    isAdmin = true;
+                    if (window.logEvent) window.logEvent('admin_panel_access', { user: username });
+                    return true;
+                }
+
+                showAccessDenied('You are not an administrator');
+                return false;
+            } catch (e) {
+                showAccessDenied('Error verifying permissions');
+                return false;
+            }
+        }
+
+        function showAccessDenied(message) {
+            const main = document.getElementById('main-content');
+            main.innerHTML = `
+                <div class="access-denied">
+                    <div class="access-denied-icon">🔒</div>
+                    <h2>Access Denied</h2>
+                    <p>${message}</p>
+                    <p style="margin-top: 20px; color: #888;">Only administrators can access this page.</p>
+                </div>
+            `;
+        }
+
+        async function loadUsers() {
+            try {
+                // Load users from localStorage
+                const usersList = JSON.parse(localStorage.getItem('usersList') || '[]');
+                
+                if (usersList.length === 0) {
+                    document.getElementById('users-list').innerHTML = '<div class="loading">No users found</div>';
+                    return;
+                }
+
+                // Get roles for all users from server
+                const rolesPromises = usersList.map(u => 
+                    fetch(`/api/user/${u.userId}/role`).then(r => r.json()).catch(() => ({ role: 'user' }))
+                );
+                const rolesArray = await Promise.all(rolesPromises);
+
+                allUsers = usersList.map((user, idx) => ({
+                    ...user,
+                    role: rolesArray[idx]?.role || 'user'
+                }));
+
+                renderUsers(allUsers);
+            } catch (error) {
+                console.error('Failed to load users:', error);
+                document.getElementById('users-list').innerHTML = 
+                    '<div class="error"><i class="fas fa-exclamation-circle"></i> Failed to load users</div>';
+            }
+        }
+
+        function renderUsers(users) {
+            const usersList = document.getElementById('users-list');
+            
+            if (users.length === 0) {
+                usersList.innerHTML = '<div class="loading">No users found</div>';
+                return;
+            }
+
+            usersList.innerHTML = users.map(user => `
+                <div class="user-card">
+                    <div class="user-info">
+                        <div class="user-name"><i class="fas fa-user-circle"></i> ${user.user}</div>
+                        <div class="user-id">${user.userId}</div>
+                    </div>
+                    <div class="user-actions">
+                        <span class="role-badge role-${user.role}">
+                            ${user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                        </span>
+                        <select class="role-select" data-user-id="${user.userId}" onchange="changeRole(this)">
+                            <option value="user" ${user.role === 'user' ? 'selected' : ''}>User</option>
+                            <option value="moderator" ${user.role === 'moderator' ? 'selected' : ''}>Moderator</option>
+                            <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                        </select>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function changeRole(selectElement) {
+            const userId = selectElement.dataset.userId;
+            const newRole = selectElement.value;
+            const oldRole = selectElement.dataset.oldRole || allUsers.find(u => u.userId === userId).role;
+
+            try {
+                const response = await fetch(`/api/user/${userId}/role`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Basic ' + btoa('admin:uhq123')
+                    },
+                    body: JSON.stringify({ role: newRole })
+                });
+
+                if (response.ok) {
+                    showSuccess(`User role updated to ${newRole}`);
+                    if (window.logEvent) window.logEvent('role_changed', { userId, oldRole, newRole });
+                    
+                    // Update local user data
+                    const user = allUsers.find(u => u.userId === userId);
+                    if (user) user.role = newRole;
+                    selectElement.dataset.oldRole = newRole;
+                } else {
+                    selectElement.value = oldRole;
+                    alert('Failed to update role');
+                }
+            } catch (error) {
+                console.error('Error changing role:', error);
+                selectElement.value = oldRole;
+                alert('Error: ' + error.message);
+            }
+        }
+
+        function showSuccess(message) {
+            const msg = document.getElementById('success-msg');
+            msg.textContent = message;
+            msg.style.display = 'block';
+            setTimeout(() => {
+                msg.style.display = 'none';
+            }, 3000);
+        }
+
+        // Search functionality
+        document.getElementById('search-box').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const filtered = allUsers.filter(u => 
+                u.user.toLowerCase().includes(query) || 
+                u.userId.toLowerCase().includes(query)
+            );
+            renderUsers(filtered);
+        });
+
+        // Initialize
+        checkAccess().then(hasAccess => {
+            if (hasAccess) {
+                loadUsers();
+            }
+        });
+    </script>
+</body>
+</html>

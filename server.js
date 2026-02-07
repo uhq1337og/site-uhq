@@ -115,4 +115,45 @@ app.post('/clear-logs', requireAuth, (req, res) => {
   }
 });
 
+// ===== ROLES MANAGEMENT =====
+const ROLES_FILE = path.join(__dirname, 'roles.json');
+
+function loadRoles() {
+  if (!fs.existsSync(ROLES_FILE)) {
+    return {};
+  }
+  try {
+    return JSON.parse(fs.readFileSync(ROLES_FILE, 'utf8'));
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveRoles(roles) {
+  fs.writeFileSync(ROLES_FILE, JSON.stringify(roles, null, 2));
+}
+
+// GET user's current role
+app.get('/api/user/:userId/role', (req, res) => {
+  const { userId } = req.params;
+  const roles = loadRoles();
+  res.json({ role: roles[userId] || 'user' });
+});
+
+// POST to change user role (admin only)
+app.post('/api/user/:userId/role', requireAuth, (req, res) => {
+  const { role } = req.body;
+  const { userId } = req.params;
+  
+  if (!['admin', 'moderator', 'user'].includes(role)) {
+    return res.status(400).json({ ok: false, error: 'Invalid role' });
+  }
+  
+  const roles = loadRoles();
+  roles[userId] = role;
+  saveRoles(roles);
+  
+  res.json({ ok: true, userId, role });
+});
+
 app.listen(PORT, () => console.log(`Logging server running on http://localhost:${PORT}`));
