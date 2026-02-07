@@ -1,21 +1,5 @@
 // Simple client-side logger
 (function(){
-  // Initialize user IDs for existing accounts
-  const users = JSON.parse(localStorage.getItem('usersList') || '[]');
-  let needsSave = false;
-  
-  users.forEach(user => {
-    if (!user.userId) {
-      user.userId = 'USER_' + Math.random().toString(36).substr(2, 9).toUpperCase();
-      user.createdAt = user.createdAt || new Date().toISOString();
-      needsSave = true;
-    }
-  });
-  
-  if (needsSave) {
-    localStorage.setItem('usersList', JSON.stringify(users));
-  }
-
   function logEvent(type, payload) {
     try {
       fetch('/log', {

@@ -216,26 +216,17 @@
 
         async function loadUsers() {
             try {
-                // Load users from localStorage
-                const usersList = JSON.parse(localStorage.getItem('usersList') || '[]');
+                // Load users from server API
+                const response = await fetch('/api/users');
+                const data = await response.json();
                 
-                if (usersList.length === 0) {
+                if (!data || data.length === 0) {
                     document.getElementById('leaderboard-body').innerHTML = 
                         '<tr class="loading"><td colspan="5">No users found</td></tr>';
                     return;
                 }
 
-                // Get roles for all users from server
-                const rolesPromises = usersList.map(u => 
-                    fetch(`/api/user/${u.userId}/role`).then(r => r.json()).catch(() => ({ role: 'user' }))
-                );
-                const rolesArray = await Promise.all(rolesPromises);
-
-                allUsers = usersList.map((user, idx) => ({
-                    ...user,
-                    role: rolesArray[idx]?.role || 'user'
-                }));
-
+                allUsers = data;
                 renderLeaderboard();
                 if (window.logEvent) window.logEvent('page_view', { page: 'leaderboard', users: allUsers.length });
             } catch (error) {

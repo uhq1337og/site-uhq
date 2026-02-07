@@ -7,9 +7,13 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const LOG_DIR = path.join(__dirname, 'logs');
 const LOG_FILE = path.join(LOG_DIR, 'app.log');
+const USERS_FILE = path.join(__dirname, 'users.json');
+const ROLES_FILE = path.join(__dirname, 'roles.json');
 const MAX_LOG_SIZE = 5 * 1024 * 1024; // 5MB before rotation
 
 if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR);
+if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, JSON.stringify([]));
+if (!fs.existsSync(ROLES_FILE)) fs.writeFileSync(ROLES_FILE, JSON.stringify({}));
 
 app.use(cors());
 app.use(express.json());
@@ -116,8 +120,6 @@ app.post('/clear-logs', requireAuth, (req, res) => {
 });
 
 // ===== ROLES MANAGEMENT =====
-const ROLES_FILE = path.join(__dirname, 'roles.json');
-
 function loadRoles() {
   if (!fs.existsSync(ROLES_FILE)) {
     return {};
@@ -133,14 +135,96 @@ function saveRoles(roles) {
   fs.writeFileSync(ROLES_FILE, JSON.stringify(roles, null, 2));
 }
 
-// GET user's current role
+// ===== USERS MANAGEMENT =====
+function loadUsers() {
+  try {
+    return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveUsers(users) {
+  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+}
+
+// POST /api/register - Register new account
+app.post('/api/register', (req, res) => {
+  const { email, pass, user } = req.body;
+  
+  if (!email || !pass || !user) {
+    return res.status(400).json({ ok: false, error: 'Missing fields' });
+  }
+
+  let users = loadUsers();
+  
+  // Check if user already exists
+  if (users.find(u => u.user.toLowerCase() === user.toLowerCase())) {
+    return res.status(400).json({ ok: false, error: 'Username already taken' });
+  }
+  
+  if (users.find(u => u.email === email)) {
+    return res.status(400).json({ ok: false, error: 'Email already registered' });
+  }
+
+  // Create new user with unique ID
+  const userId = 'USER_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+  const newUser = { userId, email, pass, user, createdAt: new Date().toISOString() };
+  
+  users.push(newUser);
+  saveUsers(users);
+  
+  // Make first user admin
+  if (users.length === 1) {
+    const roles = loadRoles();
+    roles[userId] = 'admin';
+    saveRoles(roles);
+  }
+  
+  res.json({ ok: true, userId, user });
+});
+
+// POST /api/login - Login user
+app.post('/api/login', (req, res) => {
+  const { email, pass } = req.body;
+  
+  if (!email || !pass) {
+    return res.status(400).json({ ok: false, error: 'Missing fields' });
+  }
+
+  const users = loadUsers();
+  const found = users.find(u => u.email === email && u.pass === pass);
+  
+  if (found) {
+    return res.json({ ok: true, user: found.user, userId: found.userId });
+  }
+  
+  res.status(401).json({ ok: false, error: 'Invalid credentials' });
+});
+
+// GET /api/users - Get all users with roles
+app.get('/api/users', (req, res) => {
+  const users = loadUsers();
+  const roles = loadRoles();
+  
+  const usersWithRoles = users.map(u => ({
+    userId: u.userId,
+    user: u.user,
+    role: roles[u.userId] || 'user',
+    createdAt: u.createdAt
+  }));
+  
+  res.json(usersWithRoles);
+});
+
+// GET /api/user/:userId/role - Get user's role
 app.get('/api/user/:userId/role', (req, res) => {
   const { userId } = req.params;
   const roles = loadRoles();
   res.json({ role: roles[userId] || 'user' });
 });
 
-// POST to change user role (admin only)
+// POST /api/user/:userId/role - Change user's role (admin only)
 app.post('/api/user/:userId/role', requireAuth, (req, res) => {
   const { role } = req.body;
   const { userId } = req.params;

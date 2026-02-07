@@ -229,17 +229,13 @@
         const messagesRef = ref(db, 'messages');
 
         const activeUser = localStorage.getItem('activeUser');
-        const users = JSON.parse(localStorage.getItem('usersList')) || [];
-        const currentUser = users.find(u => u.user === activeUser);
+        const activeUserId = localStorage.getItem('activeUserId');
 
-        if (!activeUser || !currentUser) window.location.href = "index.html";
+        if (!activeUser || !activeUserId) window.location.href = "index.html";
 
-        if (window.logEvent) logEvent('page_view', { page: 'home', user: currentUser.user });
+        if (window.logEvent) logEvent('page_view', { page: 'home', user: activeUser, userId: activeUserId });
 
-        document.getElementById('display-username').innerText = currentUser.user;
-        if (currentUser.profilePic) {
-            document.getElementById('avatar-display').innerHTML = `<img src="${currentUser.profilePic}">`;
-        }
+        document.getElementById('display-username').innerText = activeUser;
 
         const chatPanel = document.getElementById('chat-panel');
         const openChatBtn = document.getElementById('open-chat');

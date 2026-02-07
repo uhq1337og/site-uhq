@@ -163,20 +163,17 @@
     <script src="logger.js"></script>
     <script>
         const activeUser = localStorage.getItem('activeUser');
-        let users = JSON.parse(localStorage.getItem('usersList')) || [];
-        let userIndex = users.findIndex(u => u.user === activeUser);
+        const activeUserId = localStorage.getItem('activeUserId');
 
-        if (userIndex === -1) window.location.href = "index.html";
+        if (!activeUser || !activeUserId) window.location.href = "index.html";
 
-        const currentUser = users[userIndex];
         const usernameInput = document.getElementById('new-username');
         const preview = document.getElementById('image-preview');
         const fileInput = document.getElementById('file-input');
         const errorMessage = document.getElementById('error-message');
-        let base64Image = currentUser.profilePic || "";
+        let base64Image = "";
 
-        usernameInput.value = currentUser.user;
-        if (base64Image) preview.innerHTML = `<img src="${base64Image}">`;
+        usernameInput.value = activeUser;
 
         fileInput.onchange = (e) => {
             const file = e.target.files[0];
@@ -190,7 +187,7 @@
             }
         };
 
-        document.getElementById('save-settings').onclick = () => {
+        document.getElementById('save-settings').onclick = async () => {
             const newName = usernameInput.value.trim();
             errorMessage.style.display = 'none';
 
@@ -202,20 +199,31 @@
                 return;
             }
 
-            const exists = users.find(u => u.user.toLowerCase() === newName.toLowerCase() && u.user !== activeUser);
-            if (exists) {
-                if (window.logEvent) logEvent('validation_failed', { field: 'username_update', reason: 'already_taken' });
-                errorMessage.innerText = "Username already taken";
-                errorMessage.style.display = 'block';
-                return;
+            if (newName !== activeUser) {
+                // Check with server if username is available
+                try {
+                    const response = await fetch('/api/register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: 'test@test.com', pass: '', user: newName })
+                    });
+                    
+                    if (response.status === 400) {
+                        const data = await response.json();
+                        if (data.error.includes('Username')) {
+                            if (window.logEvent) logEvent('validation_failed', { field: 'username_update', reason: 'already_taken' });
+                            errorMessage.innerText = "Username already taken";
+                            errorMessage.style.display = 'block';
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    console.log('Not checking server for username availability');
+                }
             }
 
-            users[userIndex].user = newName;
-            users[userIndex].profilePic = base64Image;
-            
-            localStorage.setItem('usersList', JSON.stringify(users));
-            localStorage.setItem('activeUser', newName); 
-            
+            // Update localStorage
+            localStorage.setItem('activeUser', newName);
             if (window.logEvent) logEvent('account_updated', { oldUser: activeUser, newUser: newName, hasProfilePic: base64Image.length > 0 });
             window.location.href = "home.html";
         };

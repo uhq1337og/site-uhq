@@ -202,16 +202,16 @@
             document.getElementById('toggle-auth').onclick = toggleAuth.onclick;
         };
 
-        authForm.onsubmit = (e) => {
+        authForm.onsubmit = async (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value.trim();
             const pass = document.getElementById('password').value;
             const user = document.getElementById('username').value.trim();
-            let users = JSON.parse(localStorage.getItem('usersList')) || [];
 
             errorMessage.style.display = 'none';
 
             if (!isLogin) {
+                // REGISTRATION
                 const userRegex = /^[a-zA-Z0-9._]{3,}$/;
                 if (!userRegex.test(user)) {
                     if (window.logEvent) logEvent('validation_failed', { field: 'username', reason: 'invalid_format' });
@@ -220,36 +220,58 @@
                     return;
                 }
 
-                if (users.find(u => u.user.toLowerCase() === user.toLowerCase())) {
-                    if (window.logEvent) logEvent('validation_failed', { field: 'username', reason: 'already_taken' });
-                    errorMessage.innerText = "Username already taken";
+                try {
+                    const response = await fetch('/api/register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, pass, user })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (!response.ok) {
+                        if (window.logEvent) logEvent('validation_failed', { field: 'registration', reason: data.error });
+                        errorMessage.innerText = data.error || 'Registration failed';
+                        errorMessage.style.display = 'block';
+                        return;
+                    }
+
+                    // Save to localStorage for quick access
+                    localStorage.setItem('activeUser', user);
+                    localStorage.setItem('activeUserId', data.userId);
+                    if (window.logEvent) logEvent('account_created', { user, email, userId: data.userId });
+                    successModal.style.display = 'flex';
+                } catch (error) {
+                    console.error('Registration error:', error);
+                    errorMessage.innerText = 'Network error: ' + error.message;
                     errorMessage.style.display = 'block';
-                    return;
                 }
-
-                if (users.find(u => u.email === email)) {
-                    if (window.logEvent) logEvent('validation_failed', { field: 'email', reason: 'already_registered' });
-                    errorMessage.innerText = "There is already an account associated with this email address";
-                    errorMessage.style.display = 'block';
-                    return;
-                }
-
-                // Generate unique ID for new account
-                const userId = 'USER_' + Math.random().toString(36).substr(2, 9).toUpperCase();
-                users.push({userId, email, pass, user, createdAt: new Date().toISOString()});
-                localStorage.setItem('usersList', JSON.stringify(users));
-                if (window.logEvent) logEvent('account_created', { user, email, userId });
-                successModal.style.display = 'flex';
-
             } else {
-                const found = users.find(u => u.email === email && u.pass === pass);
-                if (found) {
-                    localStorage.setItem('activeUser', found.user);
-                    if (window.logEvent) logEvent('login', { user: found.user });
+                // LOGIN
+                try {
+                    const response = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, pass })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (!response.ok) {
+                        if (window.logEvent) logEvent('login_failed', { email });
+                        errorMessage.innerText = data.error || 'Login failed';
+                        errorMessage.style.display = 'block';
+                        return;
+                    }
+
+                    // Save to localStorage
+                    localStorage.setItem('activeUser', data.user);
+                    localStorage.setItem('activeUserId', data.userId);
+                    if (window.logEvent) logEvent('login', { user: data.user, userId: data.userId });
                     window.location.href = "home.html";
-                } else {
-                    if (window.logEvent) logEvent('login_failed', { email });
-                    errorMessage.innerText = "Incorrect credentials";
+                } catch (error) {
+                    console.error('Login error:', error);
+                    errorMessage.innerText = 'Network error: ' + error.message;
                     errorMessage.style.display = 'block';
                 }
             }

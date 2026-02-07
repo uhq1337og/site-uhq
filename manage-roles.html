@@ -237,21 +237,20 @@
         // Check if user is admin
         async function checkAccess() {
             const username = localStorage.getItem('activeUser');
-            if (!username) {
+            const userId = localStorage.getItem('activeUserId');
+            
+            if (!username || !userId) {
                 showAccessDenied('You must be logged in');
                 return false;
             }
 
-            // In a real app, you'd verify admin status via the server
-            // For now, we'll check localStorage users
             try {
-                const users = JSON.parse(localStorage.getItem('usersList') || '[]');
-                const currentUser = users.find(u => u.user === username);
+                const response = await fetch(`/api/user/${userId}/role`);
+                const data = await response.json();
                 
-                // Hardcode first user as admin for demo
-                if (currentUser && currentUser.user === users[0].user) {
+                if (data.role === 'admin') {
                     isAdmin = true;
-                    if (window.logEvent) window.logEvent('admin_panel_access', { user: username });
+                    if (window.logEvent) window.logEvent('admin_panel_access', { user: username, userId });
                     return true;
                 }
 
@@ -277,25 +276,16 @@
 
         async function loadUsers() {
             try {
-                // Load users from localStorage
-                const usersList = JSON.parse(localStorage.getItem('usersList') || '[]');
+                // Load users from server API
+                const response = await fetch('/api/users');
+                const data = await response.json();
                 
-                if (usersList.length === 0) {
+                if (!data || data.length === 0) {
                     document.getElementById('users-list').innerHTML = '<div class="loading">No users found</div>';
                     return;
                 }
 
-                // Get roles for all users from server
-                const rolesPromises = usersList.map(u => 
-                    fetch(`/api/user/${u.userId}/role`).then(r => r.json()).catch(() => ({ role: 'user' }))
-                );
-                const rolesArray = await Promise.all(rolesPromises);
-
-                allUsers = usersList.map((user, idx) => ({
-                    ...user,
-                    role: rolesArray[idx]?.role || 'user'
-                }));
-
+                allUsers = data;
                 renderUsers(allUsers);
             } catch (error) {
                 console.error('Failed to load users:', error);
