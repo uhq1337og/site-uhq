@@ -329,7 +329,3 @@ app.post('/api/user/:userId/role', requireAuth, async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Logging server running on http://localhost:${PORT}`));
-
-redis.keys('*').then(keys => {
-    console.log("Clés disponibles dans Redis :", keys);
-});

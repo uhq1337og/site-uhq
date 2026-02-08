@@ -71,8 +71,8 @@
         .notif-panel {
             position: absolute;
             top: 26px;
-            right: 0;
-            left: auto;
+            right: auto;
+            left: 50%;
             min-width: 220px;
             background: #0a0a0a;
             border: 1px solid #1a1a1a;
@@ -81,7 +81,7 @@
             display: none;
             z-index: 1100;
             box-shadow: 0 10px 30px rgba(0,0,0,0.45);
-            transform: translateX(0);
+            transform: translateX(-50%);
         }
 
         .notif-panel.active { display: block; }
