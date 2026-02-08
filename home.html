@@ -311,6 +311,7 @@
             border-radius: 8px;
             cursor: pointer;
             font-weight: 700;
+            flex-shrink: 0;
         }
         .send-btn:disabled { opacity: 0.6; cursor: not-allowed; }
         .msg-attachment { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
@@ -521,9 +522,6 @@
                 attachThumb.innerHTML = `<i class="fas ${getFileIconClass(file.name)}"></i>`;
             }
 
-            if (!chatInput.value.trim()) {
-                chatInput.value = file.name || '';
-            }
         }
 
         function renderAttachment(attachment) {
@@ -625,10 +623,10 @@
             }
 
             sendBtn.disabled = true;
-            let attachmentPayload = null;
+            try {
+                let attachmentPayload = null;
 
-            if (pendingAttachment) {
-                try {
+                if (pendingAttachment) {
                     const safeName = sanitizeFileName(pendingAttachment.name || 'file');
                     const path = `chat_uploads/${sanitizeFileName(currentUser.user || 'guest')}/${Date.now()}_${safeName}`;
                     const fileRef = storageRef(storage, path);
@@ -643,47 +641,46 @@
                         url,
                         isImage: (pendingAttachment.type || '').startsWith('image/')
                     };
-                } catch (error) {
-                    console.error('Attachment upload failed:', error);
-                    alert('Upload failed. Please try again.');
-                    sendBtn.disabled = false;
-                    return;
                 }
-            }
 
-            const mentions = getMentionedUsers(text);
-            const mentionDisplay = mentions.map(m => m.display);
-            const newMsgRef = push(messagesRef, {
-                username: currentUser.user,
-                text: text,
-                profilePic: currentUser.profilePic || "",
-                timestamp: serverTimestamp(),
-                mentions: mentionDisplay,
-                attachment: attachmentPayload
-            });
+                const mentions = getMentionedUsers(text);
+                const mentionDisplay = mentions.map(m => m.display);
+                const newMsgRef = push(messagesRef, {
+                    username: currentUser.user,
+                    text: text,
+                    profilePic: currentUser.profilePic || "",
+                    timestamp: serverTimestamp(),
+                    mentions: mentionDisplay,
+                    attachment: attachmentPayload
+                });
 
-            if (mentions.length > 0 && newMsgRef.key) {
-                mentions.forEach((mentionUser) => {
-                    push(ref(db, `notifications/${mentionUser.display}`), {
-                        from: currentUser.user,
-                        messageKey: newMsgRef.key,
-                        timestamp: serverTimestamp()
-                    });
-                    if (mentionUser.key && mentionUser.key !== mentionUser.display) {
-                        push(ref(db, `notifications/${mentionUser.key}`), {
+                if (mentions.length > 0 && newMsgRef.key) {
+                    mentions.forEach((mentionUser) => {
+                        push(ref(db, `notifications/${mentionUser.display}`), {
                             from: currentUser.user,
                             messageKey: newMsgRef.key,
                             timestamp: serverTimestamp()
                         });
-                    }
-                });
+                        if (mentionUser.key && mentionUser.key !== mentionUser.display) {
+                            push(ref(db, `notifications/${mentionUser.key}`), {
+                                from: currentUser.user,
+                                messageKey: newMsgRef.key,
+                                timestamp: serverTimestamp()
+                            });
+                        }
+                    });
+                }
+
+                if (window.logEvent) logEvent('message_sent', { user: currentUser.user, text });
+
+                chatInput.value = "";
+                clearAttachment();
+            } catch (error) {
+                console.error('Message send failed:', error);
+                alert('Send failed. Please try again.');
+            } finally {
+                sendBtn.disabled = false;
             }
-
-            if (window.logEvent) logEvent('message_sent', { user: currentUser.user, text });
-
-            chatInput.value = "";
-            clearAttachment();
-            sendBtn.disabled = false;
         }
 
         sendBtn.onclick = sendMessage;

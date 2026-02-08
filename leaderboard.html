@@ -43,7 +43,7 @@
         .attach-name{font-size:12px;color:#ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
         .attach-remove{background:none;border:none;color:#888;font-size:11px;cursor:pointer}
         .attach-remove:hover{color:#fff}
-        .send-btn{background:#fff;color:#000;border:none;padding:0 15px;border-radius:8px;cursor:pointer;font-weight:700}
+        .send-btn{background:#fff;color:#000;border:none;padding:0 15px;border-radius:8px;cursor:pointer;font-weight:700;flex-shrink:0}
         .send-btn:disabled{opacity:0.6;cursor:not-allowed}
         .msg-attachment{margin-top:8px;display:flex;flex-direction:column;gap:6px}
         .attach-image{width:100%;max-height:160px;object-fit:cover;border-radius:8px;border:1px solid #1a1a1a}
@@ -523,9 +523,6 @@
                 attachThumb.innerHTML = `<i class="fas ${getFileIconClass(file.name)}"></i>`;
             }
 
-            if (!chatInput.value.trim()) {
-                chatInput.value = file.name || '';
-            }
         }
 
         function renderAttachment(attachment) {
@@ -611,10 +608,10 @@
             }
 
             sendBtn.disabled = true;
-            let attachmentPayload = null;
+            try {
+                let attachmentPayload = null;
 
-            if (pendingAttachment) {
-                try {
+                if (pendingAttachment) {
                     const safeName = sanitizeFileName(pendingAttachment.name || 'file');
                     const path = `chat_uploads/${sanitizeFileName(currentUser.user || 'guest')}/${Date.now()}_${safeName}`;
                     const fileRef = storageRef(storage, path);
@@ -629,26 +626,25 @@
                         url,
                         isImage: (pendingAttachment.type || '').startsWith('image/')
                     };
-                } catch (error) {
-                    console.error('Attachment upload failed:', error);
-                    alert('Upload failed. Please try again.');
-                    sendBtn.disabled = false;
-                    return;
                 }
+
+                push(messagesRef, {
+                    username: currentUser.user,
+                    text: text,
+                    profilePic: currentUser.profilePic || "",
+                    timestamp: serverTimestamp(),
+                    attachment: attachmentPayload
+                });
+
+                chatInput.value = "";
+                clearAttachment();
+                if (window.logEvent) logEvent('message_sent', { user: currentUser.user });
+            } catch (error) {
+                console.error('Message send failed:', error);
+                alert('Send failed. Please try again.');
+            } finally {
+                sendBtn.disabled = false;
             }
-
-            push(messagesRef, {
-                username: currentUser.user,
-                text: text,
-                profilePic: currentUser.profilePic || "",
-                timestamp: serverTimestamp(),
-                attachment: attachmentPayload
-            });
-
-            chatInput.value = "";
-            clearAttachment();
-            sendBtn.disabled = false;
-            if (window.logEvent) logEvent('message_sent', { user: currentUser.user });
         }
 
         sendBtn.onclick = sendMessage;
