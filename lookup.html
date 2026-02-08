@@ -242,6 +242,7 @@
             color: white;
             outline: none;
             font-size: 13px;
+            height: 38px;
         }
         .attach-btn {
             background: #111;
@@ -306,6 +307,7 @@
             cursor: pointer;
             font-weight: 700;
             flex-shrink: 0;
+            height: 38px;
         }
         .send-btn:disabled { opacity: 0.6; cursor: not-allowed; }
         .msg-attachment { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
@@ -527,6 +529,15 @@
             return String(name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_');
         }
 
+        function readFileAsDataUrl(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(reader.error || new Error('file_read_failed'));
+                reader.readAsDataURL(file);
+            });
+        }
+
         function escapeHtml(value) {
             return String(value || '')
                 .replace(/&/g, '&amp;')
@@ -664,19 +675,36 @@
 
                 if (pendingAttachment) {
                     const safeName = sanitizeFileName(pendingAttachment.name || 'file');
-                    const path = `chat_uploads/${sanitizeFileName(currentUser.user || 'guest')}/${Date.now()}_${safeName}`;
-                    const fileRef = storageRef(storage, path);
-                    await uploadBytes(fileRef, pendingAttachment, {
-                        contentType: pendingAttachment.type || 'application/octet-stream'
-                    });
-                    const url = await getDownloadURL(fileRef);
-                    attachmentPayload = {
-                        name: pendingAttachment.name || safeName,
-                        size: pendingAttachment.size || 0,
-                        type: pendingAttachment.type || '',
-                        url,
-                        isImage: (pendingAttachment.type || '').startsWith('image/')
-                    };
+                    const isImage = (pendingAttachment.type || '').startsWith('image/');
+                    try {
+                        const path = `chat_uploads/${sanitizeFileName(currentUser.user || 'guest')}/${Date.now()}_${safeName}`;
+                        const fileRef = storageRef(storage, path);
+                        await uploadBytes(fileRef, pendingAttachment, {
+                            contentType: pendingAttachment.type || 'application/octet-stream'
+                        });
+                        const url = await getDownloadURL(fileRef);
+                        attachmentPayload = {
+                            name: pendingAttachment.name || safeName,
+                            size: pendingAttachment.size || 0,
+                            type: pendingAttachment.type || '',
+                            url,
+                            isImage
+                        };
+                    } catch (error) {
+                        if (isImage) {
+                            const dataUrl = await readFileAsDataUrl(pendingAttachment);
+                            attachmentPayload = {
+                                name: pendingAttachment.name || safeName,
+                                size: pendingAttachment.size || 0,
+                                type: pendingAttachment.type || '',
+                                url: dataUrl,
+                                isImage: true,
+                                isInline: true
+                            };
+                        } else {
+                            throw error;
+                        }
+                    }
                 }
 
                 push(messagesRef, {
