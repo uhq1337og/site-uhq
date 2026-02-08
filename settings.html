@@ -83,7 +83,7 @@
         .notif-wrap{position:relative;display:flex;align-items:center}
         .notif-icon{color:#666;cursor:pointer;font-size:20px;padding:5px;transition:0.2s}
         .notif-icon:hover{color:#fff}
-        .notif-panel{position:absolute;top:28px;right:0;left:auto;min-width:220px;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:10px;padding:10px 12px;display:none;z-index:1100;box-shadow:0 10px 30px rgba(0,0,0,0.45);transform:translateX(-100%)}
+        .notif-panel{position:absolute;top:26px;right:0;left:auto;min-width:220px;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:10px;padding:10px 12px;display:none;z-index:1100;box-shadow:0 10px 30px rgba(0,0,0,0.45);transform:translateX(0)}
         .notif-panel.active{display:block}
         .notif-title{font-size:12px;font-weight:800;letter-spacing:0.4px;text-transform:uppercase;color:#bbb}
         .notif-list{margin-top:8px;display:flex;flex-direction:column;gap:10px;max-height:220px;overflow-y:auto}
@@ -376,9 +376,8 @@
         usernameInput.value = activeUser;
 
         function clampOffsets() {
-            const scale = cropState.baseScale * cropState.zoom;
-            const drawW = cropState.imgW * scale;
-            const drawH = cropState.imgH * scale;
+            const drawW = cropState.imgW * cropState.baseScale * cropState.zoom;
+            const drawH = cropState.imgH * cropState.baseScale * cropState.zoom;
             const maxX = Math.max(0, (drawW - cropSize) / 2);
             const maxY = Math.max(0, (drawH - cropSize) / 2);
             cropState.offsetX = Math.min(maxX, Math.max(-maxX, cropState.offsetX));
@@ -388,10 +387,11 @@
         function updateCropTransform() {
             if (!cropState.img) return;
             clampOffsets();
-            const scale = cropState.baseScale * cropState.zoom;
-            cropImage.style.width = `${cropState.imgW}px`;
-            cropImage.style.height = `${cropState.imgH}px`;
-            cropImage.style.transform = `translate(-50%, -50%) translate(${cropState.offsetX}px, ${cropState.offsetY}px) scale(${scale})`;
+            const baseW = cropState.imgW * cropState.baseScale;
+            const baseH = cropState.imgH * cropState.baseScale;
+            cropImage.style.width = `${baseW}px`;
+            cropImage.style.height = `${baseH}px`;
+            cropImage.style.transform = `translate(-50%, -50%) translate(${cropState.offsetX}px, ${cropState.offsetY}px) scale(${cropState.zoom})`;
         }
 
         function openCropModal(dataUrl) {
