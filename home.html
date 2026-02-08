@@ -340,17 +340,27 @@
         const notifBtn = document.getElementById('open-notif');
         const notifPanel = document.getElementById('notif-panel');
         const notifList = document.getElementById('notif-list');
-        const notificationsRef = ref(db, `notifications/${currentUser.user}`);
+        const userMap = new Map(users.map(u => [String(u.user || '').toLowerCase(), u.user]));
+        const currentUserKey = String(currentUser.user || '').toLowerCase();
+        const notificationsRefs = [ref(db, `notifications/${currentUser.user}`)];
+        if (currentUserKey && currentUserKey !== currentUser.user) {
+            notificationsRefs.push(ref(db, `notifications/${currentUserKey}`));
+        }
 
         function getMentionedUsers(text) {
             const matchAll = text.match(/@([a-zA-Z0-9_.-]+)/g) || [];
             const unique = new Set(matchAll.map(m => m.slice(1).toLowerCase()));
-            const userMap = new Map(users.map(u => [String(u.user || '').toLowerCase(), u.user]));
             const mentions = [];
-            unique.forEach((name) => {
-                if (userMap.has(name)) mentions.push(userMap.get(name));
+            unique.forEach((key) => {
+                const display = userMap.get(key) || key;
+                mentions.push({ key, display });
             });
             return mentions;
+        }
+
+        function getMentionKeysFromText(text) {
+            const matchAll = text.match(/@([a-zA-Z0-9_.-]+)/g) || [];
+            return matchAll.map(m => m.slice(1).toLowerCase());
         }
 
         openChatBtn.onclick = () => { chatPanel.classList.add('active'); if (window.logEvent) logEvent('open_chat', { user: currentUser.user }); };
@@ -375,21 +385,29 @@
             }
 
             const mentions = getMentionedUsers(text);
+            const mentionDisplay = mentions.map(m => m.display);
             const newMsgRef = push(messagesRef, {
                 username: currentUser.user,
                 text: text,
                 profilePic: currentUser.profilePic || "",
                 timestamp: serverTimestamp(),
-                mentions: mentions
+                mentions: mentionDisplay
             });
 
             if (mentions.length > 0 && newMsgRef.key) {
                 mentions.forEach((mentionUser) => {
-                    push(ref(db, `notifications/${mentionUser}`), {
+                    push(ref(db, `notifications/${mentionUser.display}`), {
                         from: currentUser.user,
                         messageKey: newMsgRef.key,
                         timestamp: serverTimestamp()
                     });
+                    if (mentionUser.key && mentionUser.key !== mentionUser.display) {
+                        push(ref(db, `notifications/${mentionUser.key}`), {
+                            from: currentUser.user,
+                            messageKey: newMsgRef.key,
+                            timestamp: serverTimestamp()
+                        });
+                    }
                 });
             }
 
@@ -403,7 +421,13 @@
 
         onChildAdded(messagesRef, (data) => {
             const msg = data.val();
-            const hasMention = Array.isArray(msg.mentions) && msg.mentions.length > 0;
+            const textKeys = getMentionKeysFromText(msg.text || '');
+            const hasKnownMentionInText = textKeys.some(key => userMap.has(key));
+            const mentionKeys = Array.isArray(msg.mentions)
+                ? msg.mentions.map(m => String(m || '').toLowerCase())
+                : [];
+            const hasKnownMentionInList = mentionKeys.some(key => userMap.has(key));
+            const hasMention = hasKnownMentionInText || hasKnownMentionInList;
             const msgHtml = `
                 <div class="msg-item" id="msg-${data.key}">
                     <div class="msg-avatar">
@@ -430,10 +454,13 @@
             }
         }
 
-        onChildAdded(notificationsRef, (data) => {
-            const notif = data.val();
+        const seenNotifs = new Set();
+        function renderNotification(notif) {
             const fromUser = notif && notif.from ? notif.from : 'Unknown';
             const msgKey = notif && notif.messageKey ? notif.messageKey : '';
+            const signature = `${fromUser}|${msgKey}`;
+            if (seenNotifs.has(signature)) return;
+            seenNotifs.add(signature);
             const notifHtml = `
                 <div class="notif-item">
                     <div><strong>${fromUser}</strong> vous a mentionne</div>
@@ -441,6 +468,12 @@
                 </div>
             `;
             notifList.insertAdjacentHTML('afterbegin', notifHtml);
+        }
+
+        notificationsRefs.forEach((nRef) => {
+            onChildAdded(nRef, (data) => {
+                renderNotification(data.val());
+            });
         });
 
         notifList.addEventListener('click', (event) => {

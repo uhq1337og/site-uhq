@@ -13,6 +13,17 @@
         .nav-item{color:#666;text-decoration:none;font-size:14px;padding:6px 12px;transition:0.3s}
         .nav-item:hover,.nav-item.active{color:#fff}
         .nav-right{display:flex;align-items:center;gap:15px;margin-left:auto;position:relative}
+        .notif-wrap{position:relative;display:flex;align-items:center}
+        .notif-icon{color:#666;cursor:pointer;font-size:20px;padding:5px;transition:0.2s}
+        .notif-icon:hover{color:#fff}
+        .notif-panel{position:absolute;top:36px;left:0;min-width:220px;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:10px;padding:10px 12px;display:none;z-index:1100;box-shadow:0 10px 30px rgba(0,0,0,0.45)}
+        .notif-panel.active{display:block}
+        .notif-title{font-size:12px;font-weight:800;letter-spacing:0.4px;text-transform:uppercase;color:#bbb}
+        .notif-list{margin-top:8px;display:flex;flex-direction:column;gap:10px;max-height:220px;overflow-y:auto}
+        .notif-item{background:#111;border:1px solid #1a1a1a;border-radius:8px;padding:8px;font-size:12px;color:#ddd}
+        .notif-item strong{color:#fff}
+        .notif-btn{margin-top:8px;width:100%;background:#fff;color:#000;border:none;border-radius:6px;padding:6px 8px;font-size:12px;font-weight:700;cursor:pointer}
+        .msg-item.highlight{border:1px solid #4da3ff;border-radius:10px;padding:6px;background:rgba(77,163,255,0.08)}
     .user-profile{display:flex;align-items:center;gap:10px;background:rgba(10,10,10,0.65);padding:6px 12px;border-radius:10px;border:1px solid rgba(26,26,26,0.7);cursor:pointer;transition:0.2s}
     .user-profile:hover{border-color:rgba(51,51,51,0.7)}
     .avatar-box{width:26px;height:26px;background:rgba(34,34,34,0.45);border-radius:6px;overflow:hidden;display:flex;align-items:center;justify-content:center}
@@ -94,6 +105,13 @@
         </div>
 
         <div class="nav-right">
+            <div class="notif-wrap">
+                <i class="far fa-bell notif-icon" id="open-notif"></i>
+                <div class="notif-panel" id="notif-panel">
+                    <div class="notif-title">Boite de reception</div>
+                    <div class="notif-list" id="notif-list"></div>
+                </div>
+            </div>
             <i class="far fa-comment-dots" id="open-chat" style="color:#666; cursor:pointer; font-size: 20px; padding: 5px;"></i>
             
             <div style="position: relative;">
@@ -213,9 +231,28 @@ Des vrais.
         const chatInput = document.getElementById('chat-input');
         const sendBtn = document.getElementById('send-msg');
         const chatMessages = document.getElementById('chat-messages');
+        const notifBtn = document.getElementById('open-notif');
+        const notifPanel = document.getElementById('notif-panel');
+        const notifList = document.getElementById('notif-list');
+        const currentUserKey = String(currentUser.user || '').toLowerCase();
+        const notificationsRefs = [ref(db, `notifications/${currentUser.user}`)];
+        if (currentUserKey && currentUserKey !== currentUser.user) {
+            notificationsRefs.push(ref(db, `notifications/${currentUserKey}`));
+        }
 
         openChatBtn.onclick = () => { chatPanel.classList.add('active'); if (window.logEvent) logEvent('open_chat', { user: currentUser.user }); };
         closeChatBtn.onclick = () => chatPanel.classList.remove('active');
+
+        notifBtn.onclick = (event) => {
+            event.stopPropagation();
+            notifPanel.classList.toggle('active');
+        };
+
+        document.addEventListener('click', (event) => {
+            if (!notifPanel.contains(event.target) && event.target !== notifBtn) {
+                notifPanel.classList.remove('active');
+            }
+        });
 
         function sendMessage() {
             const text = chatInput.value.trim();
@@ -243,6 +280,7 @@ Des vrais.
             if (msg) {
                 const div = document.createElement('div');
                 div.className = 'msg-item';
+                div.id = `msg-${snapshot.key}`;
                 div.innerHTML = `
                     <div class="msg-avatar">${msg.profilePic ? `<img src="${msg.profilePic}">` : '<i class="fas fa-user"></i>'}</div>
                     <div class="msg-content">
@@ -253,6 +291,47 @@ Des vrais.
                 chatMessages.appendChild(div);
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             }
+        });
+
+        function goToMessage(messageKey) {
+            if (!messageKey) return;
+            chatPanel.classList.add('active');
+            const target = document.getElementById(`msg-${messageKey}`);
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                target.classList.add('highlight');
+                setTimeout(() => target.classList.remove('highlight'), 1600);
+            }
+        }
+
+        const seenNotifs = new Set();
+        function renderNotification(notif) {
+            const fromUser = notif && notif.from ? notif.from : 'Unknown';
+            const msgKey = notif && notif.messageKey ? notif.messageKey : '';
+            const signature = `${fromUser}|${msgKey}`;
+            if (seenNotifs.has(signature)) return;
+            seenNotifs.add(signature);
+            const notifHtml = `
+                <div class="notif-item">
+                    <div><strong>${fromUser}</strong> vous a mentionne</div>
+                    <button class="notif-btn" data-msg-key="${msgKey}">Allez au message</button>
+                </div>
+            `;
+            notifList.insertAdjacentHTML('afterbegin', notifHtml);
+        }
+
+        notificationsRefs.forEach((nRef) => {
+            onChildAdded(nRef, (data) => {
+                renderNotification(data.val());
+            });
+        });
+
+        notifList.addEventListener('click', (event) => {
+            const btn = event.target.closest('.notif-btn');
+            if (!btn) return;
+            const key = btn.getAttribute('data-msg-key');
+            notifPanel.classList.remove('active');
+            goToMessage(key);
         });
 
         const profileTrigger = document.getElementById('profile-trigger');

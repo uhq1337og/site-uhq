@@ -11,6 +11,7 @@ const LOG_FILE = path.join(LOG_DIR, 'app.log');
 const USERS_FILE = path.join(__dirname, 'users.json');
 const ROLES_FILE = path.join(__dirname, 'roles.json');
 const MAX_LOG_SIZE = 5 * 1024 * 1024; // 5MB before rotation
+const FORCE_FILE_FALLBACK = process.env.FORCE_FILE_FALLBACK === '1' || process.env.FORCE_FILE_FALLBACK === 'true';
 
 if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR);
 if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, JSON.stringify([]));
@@ -270,7 +271,8 @@ app.get('/api/users', async (req, res) => {
       return res.json(users);
     } catch (e) {
       console.error('Redis users error', e);
-      return res.status(500).json([]);
+      console.warn('Falling back to file-based users due to Redis error');
+      // fall through to file fallback
     }
   }
 
