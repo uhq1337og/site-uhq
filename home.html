@@ -118,6 +118,12 @@
             color: #ddd;
         }
 
+        .notif-time {
+            font-size: 11px;
+            color: #888;
+            margin-top: 6px;
+        }
+
         .notif-item strong { color: #fff; }
 
         .notif-btn {
@@ -220,6 +226,9 @@
         .msg-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .msg-content { background: #111; padding: 10px; border-radius: 10px; border: 1px solid #1a1a1a; max-width: 80%; }
         .msg-user { font-size: 11px; font-weight: 700; color: #666; margin-bottom: 4px; display: block; }
+        .msg-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+        .msg-header .msg-user { margin: 0; display: inline; }
+        .msg-time { font-size: 11px; color: #666; }
         .msg-text { font-size: 13px; line-height: 1.4; color: #ddd; word-break: break-word; }
 
         .chat-input-area {
@@ -458,6 +467,19 @@
         sendBtn.onclick = sendMessage;
         chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendMessage(); } });
 
+        function formatChatTime(ts) {
+            if (!ts) return '';
+            const raw = (ts && typeof ts === 'object' && typeof ts.seconds === 'number') ? ts.seconds * 1000 : ts;
+            const date = new Date(raw);
+            if (Number.isNaN(date.getTime())) return '';
+            const now = new Date();
+            const sameDay = date.toDateString() === now.toDateString();
+            if (sameDay) {
+                return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            }
+            return date.toLocaleDateString('fr-FR');
+        }
+
         onChildAdded(messagesRef, (data) => {
             const msg = data.val();
             const textKeys = getMentionKeysFromText(msg.text || '');
@@ -467,13 +489,17 @@
                 : [];
             const hasKnownMentionInList = mentionKeys.some(key => userMap.has(key));
             const hasMention = hasKnownMentionInText || hasKnownMentionInList;
+            const timeLabel = formatChatTime(msg.timestamp);
             const msgHtml = `
                 <div class="msg-item" id="msg-${data.key}">
                     <div class="msg-avatar">
                         ${msg.profilePic ? `<img src="${msg.profilePic}">` : `<i class="fas fa-user" style="color:#555; margin: 8px;"></i>`}
                     </div>
                     <div class="msg-content">
-                        <span class="msg-user">${msg.username}</span>
+                        <div class="msg-header">
+                            <span class="msg-user">${msg.username}</span>
+                            ${timeLabel ? `<span class="msg-time">${timeLabel}</span>` : ''}
+                        </div>
                         <p class="msg-text ${hasMention ? 'mention' : ''}">${msg.text}</p>
                     </div>
                 </div>
@@ -505,9 +531,22 @@
             }
         }
         updateBadge();
+        function formatNotifTime(ts) {
+            if (!ts) return '';
+            const date = new Date(ts);
+            if (Number.isNaN(date.getTime())) return '';
+            const now = new Date();
+            const sameDay = date.toDateString() === now.toDateString();
+            if (sameDay) {
+                return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            }
+            return date.toLocaleDateString('fr-FR');
+        }
+
         function renderNotification(notif) {
             const fromUser = notif && notif.from ? notif.from : 'Unknown';
             const msgKey = notif && notif.messageKey ? notif.messageKey : '';
+            const timeLabel = formatNotifTime(notif && notif.timestamp);
             const signature = `${fromUser}|${msgKey}`;
             if (seenNotifs.has(signature)) return;
             seenNotifs.add(signature);
@@ -517,6 +556,7 @@
             const notifHtml = `
                 <div class="notif-item">
                     <div><strong>${fromUser}</strong> vous a mentionne</div>
+                    ${timeLabel ? `<div class="notif-time">${timeLabel}</div>` : ''}
                     <button class="notif-btn" data-msg-key="${msgKey}">Allez au message</button>
                 </div>
             `;

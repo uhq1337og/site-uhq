@@ -4,7 +4,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "migrate-db": "node migrate-users-to-redis.js"
+    "migrate-db": "node migrate-users-to-redis.js",
+    "seed-redis": "node scripts/seed-redis-users.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
