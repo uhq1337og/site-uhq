@@ -1,1 +1,5 @@
-{}
+{
+	"USER_TEST1": "admin",
+	"USER_TEST2": "moderator",
+	"USER_TEST3": "user"
+}

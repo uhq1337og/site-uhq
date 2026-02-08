@@ -58,6 +58,88 @@
             position: relative;
         }
 
+        .notif-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .notif-icon {
+            color: #666;
+            cursor: pointer;
+            font-size: 20px;
+            padding: 5px;
+            transition: 0.2s;
+        }
+
+        .notif-icon:hover { color: #fff; }
+
+        .notif-panel {
+            position: absolute;
+            top: 36px;
+            left: 0;
+            min-width: 220px;
+            background: #0a0a0a;
+            border: 1px solid #1a1a1a;
+            border-radius: 10px;
+            padding: 10px 12px;
+            display: none;
+            z-index: 1100;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+        }
+
+        .notif-panel.active { display: block; }
+
+        .notif-title {
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            color: #bbb;
+        }
+
+        .notif-list {
+            margin-top: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .notif-item {
+            background: #111;
+            border: 1px solid #1a1a1a;
+            border-radius: 8px;
+            padding: 8px;
+            font-size: 12px;
+            color: #ddd;
+        }
+
+        .notif-item strong { color: #fff; }
+
+        .notif-btn {
+            margin-top: 8px;
+            width: 100%;
+            background: #fff;
+            color: #000;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .msg-text.mention { color: #4da3ff; }
+
+        .msg-item.highlight {
+            border: 1px solid #4da3ff;
+            border-radius: 10px;
+            padding: 6px;
+            background: rgba(77, 163, 255, 0.08);
+        }
+
         .user-profile {
             display: flex;
             align-items: center;
@@ -183,6 +265,13 @@
         </div>
 
         <div class="nav-right">
+            <div class="notif-wrap">
+                <i class="far fa-bell notif-icon" id="open-notif"></i>
+                <div class="notif-panel" id="notif-panel">
+                    <div class="notif-title">Boite de reception</div>
+                    <div class="notif-list" id="notif-list"></div>
+                </div>
+            </div>
             <i class="far fa-comment-dots" id="open-chat" style="color:#666; cursor:pointer; font-size: 20px; padding: 5px;"></i>
             
             <div style="position: relative;">
@@ -248,9 +337,35 @@
         const chatInput = document.getElementById('chat-input');
         const sendBtn = document.getElementById('send-msg');
         const chatMessages = document.getElementById('chat-messages');
+        const notifBtn = document.getElementById('open-notif');
+        const notifPanel = document.getElementById('notif-panel');
+        const notifList = document.getElementById('notif-list');
+        const notificationsRef = ref(db, `notifications/${currentUser.user}`);
+
+        function getMentionedUsers(text) {
+            const matchAll = text.match(/@([a-zA-Z0-9_.-]+)/g) || [];
+            const unique = new Set(matchAll.map(m => m.slice(1).toLowerCase()));
+            const userMap = new Map(users.map(u => [String(u.user || '').toLowerCase(), u.user]));
+            const mentions = [];
+            unique.forEach((name) => {
+                if (userMap.has(name)) mentions.push(userMap.get(name));
+            });
+            return mentions;
+        }
 
         openChatBtn.onclick = () => { chatPanel.classList.add('active'); if (window.logEvent) logEvent('open_chat', { user: currentUser.user }); };
         closeChatBtn.onclick = () => chatPanel.classList.remove('active');
+
+        notifBtn.onclick = (event) => {
+            event.stopPropagation();
+            notifPanel.classList.toggle('active');
+        };
+
+        document.addEventListener('click', (event) => {
+            if (!notifPanel.contains(event.target) && event.target !== notifBtn) {
+                notifPanel.classList.remove('active');
+            }
+        });
 
         function sendMessage() {
             const text = chatInput.value.trim();
@@ -259,12 +374,24 @@
                 return;
             }
 
-            push(messagesRef, {
+            const mentions = getMentionedUsers(text);
+            const newMsgRef = push(messagesRef, {
                 username: currentUser.user,
                 text: text,
                 profilePic: currentUser.profilePic || "",
-                timestamp: serverTimestamp()
+                timestamp: serverTimestamp(),
+                mentions: mentions
             });
+
+            if (mentions.length > 0 && newMsgRef.key) {
+                mentions.forEach((mentionUser) => {
+                    push(ref(db, `notifications/${mentionUser}`), {
+                        from: currentUser.user,
+                        messageKey: newMsgRef.key,
+                        timestamp: serverTimestamp()
+                    });
+                });
+            }
 
             if (window.logEvent) logEvent('message_sent', { user: currentUser.user, text });
 
@@ -276,19 +403,52 @@
 
         onChildAdded(messagesRef, (data) => {
             const msg = data.val();
+            const hasMention = Array.isArray(msg.mentions) && msg.mentions.length > 0;
             const msgHtml = `
-                <div class="msg-item">
+                <div class="msg-item" id="msg-${data.key}">
                     <div class="msg-avatar">
                         ${msg.profilePic ? `<img src="${msg.profilePic}">` : `<i class="fas fa-user" style="color:#555; margin: 8px;"></i>`}
                     </div>
                     <div class="msg-content">
                         <span class="msg-user">${msg.username}</span>
-                        <p class="msg-text">${msg.text}</p>
+                        <p class="msg-text ${hasMention ? 'mention' : ''}">${msg.text}</p>
                     </div>
                 </div>
             `;
             chatMessages.insertAdjacentHTML('beforeend', msgHtml);
             chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+
+        function goToMessage(messageKey) {
+            if (!messageKey) return;
+            chatPanel.classList.add('active');
+            const target = document.getElementById(`msg-${messageKey}`);
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                target.classList.add('highlight');
+                setTimeout(() => target.classList.remove('highlight'), 1600);
+            }
+        }
+
+        onChildAdded(notificationsRef, (data) => {
+            const notif = data.val();
+            const fromUser = notif && notif.from ? notif.from : 'Unknown';
+            const msgKey = notif && notif.messageKey ? notif.messageKey : '';
+            const notifHtml = `
+                <div class="notif-item">
+                    <div><strong>${fromUser}</strong> vous a mentionne</div>
+                    <button class="notif-btn" data-msg-key="${msgKey}">Allez au message</button>
+                </div>
+            `;
+            notifList.insertAdjacentHTML('afterbegin', notifHtml);
+        });
+
+        notifList.addEventListener('click', (event) => {
+            const btn = event.target.closest('.notif-btn');
+            if (!btn) return;
+            const key = btn.getAttribute('data-msg-key');
+            notifPanel.classList.remove('active');
+            goToMessage(key);
         });
 
         const profileTriggerHome = document.getElementById('profile-trigger');
