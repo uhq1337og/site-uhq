@@ -86,7 +86,7 @@
         .notif-wrap{position:relative;display:flex;align-items:center}
         .notif-icon{color:#666;cursor:pointer;font-size:20px;padding:5px;transition:0.2s}
         .notif-icon:hover{color:#fff}
-        .notif-panel{position:absolute;top:36px;right:0;left:auto;min-width:220px;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:10px;padding:10px 12px;display:none;z-index:1100;box-shadow:0 10px 30px rgba(0,0,0,0.45);transform:translateX(-100%)}
+        .notif-panel{position:absolute;top:28px;right:0;left:auto;min-width:220px;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:10px;padding:10px 12px;display:none;z-index:1100;box-shadow:0 10px 30px rgba(0,0,0,0.45);transform:translateX(-100%)}
         .notif-panel.active{display:block}
         .notif-title{font-size:12px;font-weight:800;letter-spacing:0.4px;text-transform:uppercase;color:#bbb}
         .notif-list{margin-top:8px;display:flex;flex-direction:column;gap:10px;max-height:220px;overflow-y:auto}
@@ -439,6 +439,8 @@
         closeChatBtn.onclick = () => chatPanel.classList.remove('active');
 
         const notifStorageKey = `notifCount:${currentUserKey || currentUser.user}`;
+        const notifSeenKey = `notifLastSeen:${currentUserKey || currentUser.user}`;
+        let lastSeen = parseInt(localStorage.getItem(notifSeenKey) || '0', 10);
 
         notifBtn.onclick = (event) => {
             event.stopPropagation();
@@ -447,6 +449,8 @@
             if (willOpen) {
                 notifCount = 0;
                 localStorage.setItem(notifStorageKey, '0');
+                lastSeen = Date.now();
+                localStorage.setItem(notifSeenKey, String(lastSeen));
                 updateBadge();
             }
         };
@@ -462,6 +466,10 @@
                 const nextVal = parseInt(event.newValue || '0', 10);
                 notifCount = Number.isNaN(nextVal) ? 0 : nextVal;
                 updateBadge();
+            }
+            if (event.key === notifSeenKey) {
+                const nextSeen = parseInt(event.newValue || '0', 10);
+                lastSeen = Number.isNaN(nextSeen) ? 0 : nextSeen;
             }
         });
 
@@ -556,16 +564,27 @@
             return date.toLocaleDateString('fr-FR');
         }
 
+        function getNotifMillis(ts) {
+            if (!ts) return 0;
+            if (typeof ts === 'object' && typeof ts.seconds === 'number') return ts.seconds * 1000;
+            if (typeof ts === 'number') return ts;
+            const parsed = new Date(ts).getTime();
+            return Number.isNaN(parsed) ? 0 : parsed;
+        }
+
         function renderNotification(notif) {
             const fromUser = notif && notif.from ? notif.from : 'Unknown';
             const msgKey = notif && notif.messageKey ? notif.messageKey : '';
             const timeLabel = formatNotifTime(notif && notif.timestamp);
+            const notifTimeMs = getNotifMillis(notif && notif.timestamp);
             const signature = `${fromUser}|${msgKey}`;
             if (seenNotifs.has(signature)) return;
             seenNotifs.add(signature);
-            notifCount += 1;
-            localStorage.setItem(notifStorageKey, String(notifCount));
-            updateBadge();
+            if (notifTimeMs > lastSeen) {
+                notifCount += 1;
+                localStorage.setItem(notifStorageKey, String(notifCount));
+                updateBadge();
+            }
             const notifHtml = `
                 <div class="notif-item">
                     <div><strong>${fromUser}</strong> vous a mentionne</div>
@@ -589,6 +608,8 @@
             notifPanel.classList.remove('active');
             notifCount = 0;
             localStorage.setItem(notifStorageKey, '0');
+            lastSeen = Date.now();
+            localStorage.setItem(notifSeenKey, String(lastSeen));
             updateBadge();
             goToMessage(key);
         });
