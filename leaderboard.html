@@ -31,9 +31,24 @@
         .msg-header .msg-user{margin:0;display:inline}
         .msg-time{font-size:11px;color:#666}
         .msg-text{font-size:13px;line-height:1.4;color:#ddd;word-break:break-word}
-        .chat-input-area{padding:20px;border-top:1px solid #1a1a1a;display:flex;gap:10px}
+        .chat-input-area{padding:20px;border-top:1px solid #1a1a1a;display:flex;gap:10px;align-items:flex-end}
+        .chat-input-stack{flex:1;display:flex;flex-direction:column;gap:8px}
         .chat-input{flex:1;background:#111;border:1px solid #222;border-radius:8px;padding:10px;color:white;outline:none;font-size:13px}
+        .attach-btn{background:#111;border:1px solid #222;color:#bbb;border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:0.2s}
+        .attach-btn:hover{color:#fff;border-color:#333;background:#151515}
+        .attach-preview{display:none;align-items:center;gap:10px;background:#111;border:1px solid #222;border-radius:8px;padding:6px 8px}
+        .attach-thumb{width:32px;height:32px;border-radius:6px;background:#1a1a1a;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;color:#666;font-size:14px}
+        .attach-thumb img{width:100%;height:100%;object-fit:cover}
+        .attach-info{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+        .attach-name{font-size:12px;color:#ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+        .attach-remove{background:none;border:none;color:#888;font-size:11px;cursor:pointer}
+        .attach-remove:hover{color:#fff}
         .send-btn{background:#fff;color:#000;border:none;padding:0 15px;border-radius:8px;cursor:pointer;font-weight:700}
+        .send-btn:disabled{opacity:0.6;cursor:not-allowed}
+        .msg-attachment{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+        .attach-image{width:100%;max-height:160px;object-fit:cover;border-radius:8px;border:1px solid #1a1a1a}
+        .attach-link{display:inline-flex;align-items:center;gap:8px;color:#8bb7ff;text-decoration:none;font-size:12px;word-break:break-word}
+        .attach-link:hover{color:#fff}
 
         /* PROFILE MENU */
         .profile-menu{position:absolute;top:55px;right:0;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:10px;width:180px;display:none;flex-direction:column;padding:5px;z-index:1001}
@@ -222,7 +237,18 @@
         </div>
         <div class="chat-messages" id="chat-messages"></div>
         <div class="chat-input-area">
-            <input type="text" id="chat-input" class="chat-input" placeholder="Write a message...">
+            <button class="attach-btn" id="attach-btn" title="Ajouter une piece jointe"><i class="fas fa-paperclip"></i></button>
+            <input type="file" id="chat-file" class="chat-file" hidden>
+            <div class="chat-input-stack">
+                <div class="attach-preview" id="attach-preview">
+                    <div class="attach-thumb" id="attach-thumb"><i class="fas fa-file"></i></div>
+                    <div class="attach-info">
+                        <span class="attach-name" id="attach-name"></span>
+                        <button class="attach-remove" id="attach-remove" type="button">Retirer</button>
+                    </div>
+                </div>
+                <input type="text" id="chat-input" class="chat-input" placeholder="Write a message...">
+            </div>
             <button class="send-btn" id="send-msg"><i class="fas fa-paper-plane"></i></button>
         </div>
     </div>
@@ -391,6 +417,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, push, onChildAdded, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDfpmjienRGdJ_xw4bYYThLGpJ32UG9GdA",
@@ -404,6 +431,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
+        const storage = getStorage(app);
         const messagesRef = ref(db, 'messages');
 
         const activeUser = localStorage.getItem('activeUser');
@@ -425,6 +453,12 @@
         const chatInput = document.getElementById('chat-input');
         const sendBtn = document.getElementById('send-msg');
         const chatMessages = document.getElementById('chat-messages');
+        const attachBtn = document.getElementById('attach-btn');
+        const chatFile = document.getElementById('chat-file');
+        const attachPreview = document.getElementById('attach-preview');
+        const attachThumb = document.getElementById('attach-thumb');
+        const attachName = document.getElementById('attach-name');
+        const attachRemove = document.getElementById('attach-remove');
         const notifBtn = document.getElementById('open-notif');
         const notifPanel = document.getElementById('notif-panel');
         const notifList = document.getElementById('notif-list');
@@ -433,6 +467,102 @@
         const notificationsRefs = [ref(db, `notifications/${currentUser.user}`)];
         if (currentUserKey && currentUserKey !== currentUser.user) {
             notificationsRefs.push(ref(db, `notifications/${currentUserKey}`));
+        }
+
+        let pendingAttachment = null;
+        let pendingPreviewUrl = '';
+
+        function sanitizeFileName(name) {
+            return String(name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_');
+        }
+
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function getFileIconClass(name) {
+            const lower = String(name || '').toLowerCase();
+            if (lower.endsWith('.zip') || lower.endsWith('.rar') || lower.endsWith('.7z')) return 'fa-file-archive';
+            if (lower.endsWith('.exe') || lower.endsWith('.msi')) return 'fa-gear';
+            if (lower.endsWith('.pdf')) return 'fa-file-pdf';
+            return 'fa-file';
+        }
+
+        function clearAttachment() {
+            pendingAttachment = null;
+            chatFile.value = '';
+            attachPreview.style.display = 'none';
+            attachName.textContent = '';
+            attachThumb.innerHTML = '<i class="fas fa-file"></i>';
+            if (pendingPreviewUrl) {
+                URL.revokeObjectURL(pendingPreviewUrl);
+                pendingPreviewUrl = '';
+            }
+        }
+
+        function setAttachmentPreview(file) {
+            if (!file) return;
+            pendingAttachment = file;
+            attachName.textContent = file.name || 'attachment';
+            attachPreview.style.display = 'flex';
+
+            if (pendingPreviewUrl) {
+                URL.revokeObjectURL(pendingPreviewUrl);
+                pendingPreviewUrl = '';
+            }
+
+            if ((file.type || '').startsWith('image/')) {
+                pendingPreviewUrl = URL.createObjectURL(file);
+                attachThumb.innerHTML = `<img src="${pendingPreviewUrl}" alt="preview">`;
+            } else {
+                attachThumb.innerHTML = `<i class="fas ${getFileIconClass(file.name)}"></i>`;
+            }
+
+            if (!chatInput.value.trim()) {
+                chatInput.value = file.name || '';
+            }
+        }
+
+        function renderAttachment(attachment) {
+            if (!attachment || !attachment.url) return '';
+            const safeName = escapeHtml(attachment.name || 'attachment');
+            const safeUrl = attachment.url;
+            if (attachment.isImage) {
+                return `
+                    <div class="msg-attachment">
+                        <a href="${safeUrl}" target="_blank" rel="noopener" download>
+                            <img src="${safeUrl}" alt="${safeName}" class="attach-image">
+                        </a>
+                        <a class="attach-link" href="${safeUrl}" target="_blank" rel="noopener" download>
+                            <i class="fas fa-paperclip"></i>${safeName}
+                        </a>
+                    </div>
+                `;
+            }
+            const iconClass = getFileIconClass(attachment.name);
+            return `
+                <div class="msg-attachment">
+                    <a class="attach-link" href="${safeUrl}" target="_blank" rel="noopener" download>
+                        <i class="fas ${iconClass}"></i>${safeName}
+                    </a>
+                </div>
+            `;
+        }
+
+        if (attachBtn && chatFile) {
+            attachBtn.addEventListener('click', () => chatFile.click());
+            chatFile.addEventListener('change', () => setAttachmentPreview(chatFile.files && chatFile.files[0]));
+        }
+        if (attachRemove) {
+            attachRemove.addEventListener('click', (event) => {
+                event.preventDefault();
+                clearAttachment();
+            });
         }
 
         openChatBtn.onclick = () => { chatPanel.classList.add('active'); if (window.logEvent) logEvent('open_chat', { user: currentUser.user }); };
@@ -473,21 +603,51 @@
             }
         });
 
-        function sendMessage() {
+        async function sendMessage() {
             const text = chatInput.value.trim();
-            if (text === "") {
+            if (!text && !pendingAttachment) {
                 if (window.logEvent) logEvent('message_send_failed', { user: currentUser.user, reason: 'empty_message' });
                 return;
+            }
+
+            sendBtn.disabled = true;
+            let attachmentPayload = null;
+
+            if (pendingAttachment) {
+                try {
+                    const safeName = sanitizeFileName(pendingAttachment.name || 'file');
+                    const path = `chat_uploads/${sanitizeFileName(currentUser.user || 'guest')}/${Date.now()}_${safeName}`;
+                    const fileRef = storageRef(storage, path);
+                    await uploadBytes(fileRef, pendingAttachment, {
+                        contentType: pendingAttachment.type || 'application/octet-stream'
+                    });
+                    const url = await getDownloadURL(fileRef);
+                    attachmentPayload = {
+                        name: pendingAttachment.name || safeName,
+                        size: pendingAttachment.size || 0,
+                        type: pendingAttachment.type || '',
+                        url,
+                        isImage: (pendingAttachment.type || '').startsWith('image/')
+                    };
+                } catch (error) {
+                    console.error('Attachment upload failed:', error);
+                    alert('Upload failed. Please try again.');
+                    sendBtn.disabled = false;
+                    return;
+                }
             }
 
             push(messagesRef, {
                 username: currentUser.user,
                 text: text,
                 profilePic: currentUser.profilePic || "",
-                timestamp: serverTimestamp()
+                timestamp: serverTimestamp(),
+                attachment: attachmentPayload
             });
 
             chatInput.value = "";
+            clearAttachment();
+            sendBtn.disabled = false;
             if (window.logEvent) logEvent('message_sent', { user: currentUser.user });
         }
 
@@ -511,6 +671,8 @@
             const msg = snapshot.val();
             if (msg) {
                 const timeLabel = formatChatTime(msg.timestamp);
+                const attachmentHtml = renderAttachment(msg.attachment);
+                const textHtml = msg.text ? `<span class="msg-text">${msg.text}</span>` : '';
                 const div = document.createElement('div');
                 div.className = 'msg-item';
                 div.id = `msg-${snapshot.key}`;
@@ -521,7 +683,8 @@
                             <span class="msg-user">${msg.username}</span>
                             ${timeLabel ? `<span class="msg-time">${timeLabel}</span>` : ''}
                         </div>
-                        <span class="msg-text">${msg.text}</span>
+                        ${textHtml}
+                        ${attachmentHtml}
                     </div>
                 `;
                 chatMessages.appendChild(div);
