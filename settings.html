@@ -391,7 +391,7 @@
             const scale = cropState.baseScale * cropState.zoom;
             cropImage.style.width = `${cropState.imgW}px`;
             cropImage.style.height = `${cropState.imgH}px`;
-            cropImage.style.transform = `translate(${cropState.offsetX}px, ${cropState.offsetY}px) scale(${scale})`;
+            cropImage.style.transform = `translate(-50%, -50%) translate(${cropState.offsetX}px, ${cropState.offsetY}px) scale(${scale})`;
         }
 
         function openCropModal(dataUrl) {
