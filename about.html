@@ -16,13 +16,14 @@
         .notif-wrap{position:relative;display:flex;align-items:center}
         .notif-icon{color:#666;cursor:pointer;font-size:20px;padding:5px;transition:0.2s}
         .notif-icon:hover{color:#fff}
-        .notif-panel{position:absolute;top:36px;left:0;min-width:220px;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:10px;padding:10px 12px;display:none;z-index:1100;box-shadow:0 10px 30px rgba(0,0,0,0.45)}
+        .notif-panel{position:absolute;top:36px;right:0;left:auto;min-width:220px;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:10px;padding:10px 12px;display:none;z-index:1100;box-shadow:0 10px 30px rgba(0,0,0,0.45);transform:translateX(-100%)}
         .notif-panel.active{display:block}
         .notif-title{font-size:12px;font-weight:800;letter-spacing:0.4px;text-transform:uppercase;color:#bbb}
         .notif-list{margin-top:8px;display:flex;flex-direction:column;gap:10px;max-height:220px;overflow-y:auto}
         .notif-item{background:#111;border:1px solid #1a1a1a;border-radius:8px;padding:8px;font-size:12px;color:#ddd}
         .notif-item strong{color:#fff}
         .notif-btn{margin-top:8px;width:100%;background:#fff;color:#000;border:none;border-radius:6px;padding:6px 8px;font-size:12px;font-weight:700;cursor:pointer}
+        .notif-badge{position:absolute;top:-4px;right:-4px;background:#fff;color:#000;border:1px solid #ff3b3b;border-radius:10px;min-width:16px;height:16px;padding:0 4px;font-size:10px;font-weight:700;display:none;align-items:center;justify-content:center;line-height:1}
         .msg-item.highlight{border:1px solid #4da3ff;border-radius:10px;padding:6px;background:rgba(77,163,255,0.08)}
     .user-profile{display:flex;align-items:center;gap:10px;background:rgba(10,10,10,0.65);padding:6px 12px;border-radius:10px;border:1px solid rgba(26,26,26,0.7);cursor:pointer;transition:0.2s}
     .user-profile:hover{border-color:rgba(51,51,51,0.7)}
@@ -107,6 +108,7 @@
         <div class="nav-right">
             <div class="notif-wrap">
                 <i class="far fa-bell notif-icon" id="open-notif"></i>
+                <span class="notif-badge" id="notif-badge">0</span>
                 <div class="notif-panel" id="notif-panel">
                     <div class="notif-title">Boite de reception</div>
                     <div class="notif-list" id="notif-list"></div>
@@ -234,6 +236,7 @@ Des vrais.
         const notifBtn = document.getElementById('open-notif');
         const notifPanel = document.getElementById('notif-panel');
         const notifList = document.getElementById('notif-list');
+        const notifBadge = document.getElementById('notif-badge');
         const currentUserKey = String(currentUser.user || '').toLowerCase();
         const notificationsRefs = [ref(db, `notifications/${currentUser.user}`)];
         if (currentUserKey && currentUserKey !== currentUser.user) {
@@ -243,14 +246,30 @@ Des vrais.
         openChatBtn.onclick = () => { chatPanel.classList.add('active'); if (window.logEvent) logEvent('open_chat', { user: currentUser.user }); };
         closeChatBtn.onclick = () => chatPanel.classList.remove('active');
 
+        const notifStorageKey = `notifCount:${currentUserKey || currentUser.user}`;
+
         notifBtn.onclick = (event) => {
             event.stopPropagation();
+            const willOpen = !notifPanel.classList.contains('active');
             notifPanel.classList.toggle('active');
+            if (willOpen) {
+                notifCount = 0;
+                localStorage.setItem(notifStorageKey, '0');
+                updateBadge();
+            }
         };
 
         document.addEventListener('click', (event) => {
             if (!notifPanel.contains(event.target) && event.target !== notifBtn) {
                 notifPanel.classList.remove('active');
+            }
+        });
+
+        window.addEventListener('storage', (event) => {
+            if (event.key === notifStorageKey) {
+                const nextVal = parseInt(event.newValue || '0', 10);
+                notifCount = Number.isNaN(nextVal) ? 0 : nextVal;
+                updateBadge();
             }
         });
 
@@ -305,12 +324,26 @@ Des vrais.
         }
 
         const seenNotifs = new Set();
+        let notifCount = parseInt(localStorage.getItem(notifStorageKey) || '0', 10);
+        function updateBadge() {
+            if (!notifBadge) return;
+            if (notifCount > 0) {
+                notifBadge.textContent = String(notifCount);
+                notifBadge.style.display = 'flex';
+            } else {
+                notifBadge.style.display = 'none';
+            }
+        }
+        updateBadge();
         function renderNotification(notif) {
             const fromUser = notif && notif.from ? notif.from : 'Unknown';
             const msgKey = notif && notif.messageKey ? notif.messageKey : '';
             const signature = `${fromUser}|${msgKey}`;
             if (seenNotifs.has(signature)) return;
             seenNotifs.add(signature);
+            notifCount += 1;
+            localStorage.setItem(notifStorageKey, String(notifCount));
+            updateBadge();
             const notifHtml = `
                 <div class="notif-item">
                     <div><strong>${fromUser}</strong> vous a mentionne</div>
@@ -331,6 +364,9 @@ Des vrais.
             if (!btn) return;
             const key = btn.getAttribute('data-msg-key');
             notifPanel.classList.remove('active');
+            notifCount = 0;
+            localStorage.setItem(notifStorageKey, '0');
+            updateBadge();
             goToMessage(key);
         });
 

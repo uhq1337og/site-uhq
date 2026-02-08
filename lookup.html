@@ -71,7 +71,8 @@
         .notif-panel {
             position: absolute;
             top: 36px;
-            left: 0;
+            right: 0;
+            left: auto;
             min-width: 220px;
             background: #0a0a0a;
             border: 1px solid #1a1a1a;
@@ -80,6 +81,7 @@
             display: none;
             z-index: 1100;
             box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+            transform: translateX(-100%);
         }
 
         .notif-panel.active { display: block; }
@@ -123,6 +125,25 @@
             font-size: 12px;
             font-weight: 700;
             cursor: pointer;
+        }
+
+        .notif-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: #fff;
+            color: #000;
+            border: 1px solid #ff3b3b;
+            border-radius: 10px;
+            min-width: 16px;
+            height: 16px;
+            padding: 0 4px;
+            font-size: 10px;
+            font-weight: 700;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
         }
 
         .msg-item.highlight {
@@ -318,6 +339,7 @@
         <div class="nav-right">
             <div class="notif-wrap">
                 <i class="far fa-bell notif-icon" id="open-notif"></i>
+                <span class="notif-badge" id="notif-badge">0</span>
                 <div class="notif-panel" id="notif-panel">
                     <div class="notif-title">Boite de reception</div>
                     <div class="notif-list" id="notif-list"></div>
@@ -393,6 +415,7 @@
         const notifBtn = document.getElementById('open-notif');
         const notifPanel = document.getElementById('notif-panel');
         const notifList = document.getElementById('notif-list');
+        const notifBadge = document.getElementById('notif-badge');
         const currentUserKey = String(currentUser.user || '').toLowerCase();
         const notificationsRefs = [ref(db, `notifications/${currentUser.user}`)];
         if (currentUserKey && currentUserKey !== currentUser.user) {
@@ -402,14 +425,30 @@
         openChatBtn.onclick = () => { chatPanel.classList.add('active'); if (window.logEvent) logEvent('open_chat', { user: currentUser.user }); };
         closeChatBtn.onclick = () => chatPanel.classList.remove('active');
 
+        const notifStorageKey = `notifCount:${currentUserKey || currentUser.user}`;
+
         notifBtn.onclick = (event) => {
             event.stopPropagation();
+            const willOpen = !notifPanel.classList.contains('active');
             notifPanel.classList.toggle('active');
+            if (willOpen) {
+                notifCount = 0;
+                localStorage.setItem(notifStorageKey, '0');
+                updateBadge();
+            }
         };
 
         document.addEventListener('click', (event) => {
             if (!notifPanel.contains(event.target) && event.target !== notifBtn) {
                 notifPanel.classList.remove('active');
+            }
+        });
+
+        window.addEventListener('storage', (event) => {
+            if (event.key === notifStorageKey) {
+                const nextVal = parseInt(event.newValue || '0', 10);
+                notifCount = Number.isNaN(nextVal) ? 0 : nextVal;
+                updateBadge();
             }
         });
 
@@ -464,12 +503,26 @@
         }
 
         const seenNotifs = new Set();
+        let notifCount = parseInt(localStorage.getItem(notifStorageKey) || '0', 10);
+        function updateBadge() {
+            if (!notifBadge) return;
+            if (notifCount > 0) {
+                notifBadge.textContent = String(notifCount);
+                notifBadge.style.display = 'flex';
+            } else {
+                notifBadge.style.display = 'none';
+            }
+        }
+        updateBadge();
         function renderNotification(notif) {
             const fromUser = notif && notif.from ? notif.from : 'Unknown';
             const msgKey = notif && notif.messageKey ? notif.messageKey : '';
             const signature = `${fromUser}|${msgKey}`;
             if (seenNotifs.has(signature)) return;
             seenNotifs.add(signature);
+            notifCount += 1;
+            localStorage.setItem(notifStorageKey, String(notifCount));
+            updateBadge();
             const notifHtml = `
                 <div class="notif-item">
                     <div><strong>${fromUser}</strong> vous a mentionne</div>
@@ -490,6 +543,9 @@
             if (!btn) return;
             const key = btn.getAttribute('data-msg-key');
             notifPanel.classList.remove('active');
+            notifCount = 0;
+            localStorage.setItem(notifStorageKey, '0');
+            updateBadge();
             goToMessage(key);
         });
 
